@@ -1,0 +1,22 @@
+# ===== Base (fases 1-2: banco e ingestão) =====
+python-dotenv>=1.0
+SQLAlchemy>=2.0
+psycopg2-binary>=2.9      # driver Postgres
+pyodbc>=5.1              # driver SQL Server (Protheus)
+pandas>=2.2
+openpyxl>=3.1           # ler .xlsx durante a migração
+
+# ===== Transformação (fase dbt) =====
+dbt-core>=1.8
+dbt-postgres>=1.8
+
+# ===== Ingestão moderna (opcional, evolução da fase de ingestão) =====
+dlt[postgres]>=1.0
+
+# ===== Dashboards (fase 5) =====
+streamlit>=1.37
+plotly>=5.23
+
+# ===== Orquestração (fase 7) =====
+dagster>=1.8
+dagster-webserver>=1.8

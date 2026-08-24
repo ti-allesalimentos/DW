@@ -1,0 +1,51 @@
+# alles-dataplatform
+
+Plataforma de dados replicável — data warehouse + dashboards em Python.
+**Cliente zero:** Alles Alimentos. **Piloto:** faturamento.
+
+Este repositório é a base que, depois de validada na Alles, vira o
+template aplicável a outros clientes (troca-se `config/cliente.yml`).
+
+## Arquitetura (resumo)
+- **Warehouse:** PostgreSQL (on-premises, via Docker) — camadas `raw` (bronze) e `dw` (gold).
+- **Ingestão:** Python lê o Protheus (SQL Server) e grava na camada `raw`.
+- **Transformação:** SQL / dbt (bronze → silver → gold, modelo estrela).
+- **Dashboards:** Streamlit + Plotly.
+- **Orquestração:** Dagster (fase final).
+
+## Estrutura
+```
+alles-dataplatform/
+├── docker-compose.yml        # Postgres + Adminer
+├── requirements.txt          # bibliotecas (por fase)
+├── .env.example              # copie para .env e preencha
+├── config/cliente.yml        # config do cliente (o que muda entre clientes)
+├── sql/01_modelo_faturamento.sql   # DDL do modelo estrela + povoamento do fato
+├── ingestion/
+│   ├── extract_protheus.py   # Protheus -> raw.faturamento
+│   └── queries/faturamento.sql
+├── dashboards/faturamento_app.py   # dashboard Streamlit
+├── dbt/        # (fase de transformação)
+├── dagster/    # (fase de orquestração)
+└── docs/
+    ├── roadmap.md            # o plano em fases
+    └── prompts.md            # prompts para o Claude Code
+```
+
+## Pré-requisitos
+- Docker Desktop (Windows, com WSL2) ou Docker no Linux
+- Git
+- Python 3.11+ (o Claude Code cria o ambiente virtual e instala o requirements.txt)
+
+## Início rápido (fases 1 e 2)
+1. `cp .env.example .env` e ajuste a senha do Postgres.
+2. `docker compose up -d` — sobe Postgres (porta 5432) e Adminer (http://localhost:8080).
+3. Rode o `sql/01_modelo_faturamento.sql` para criar os schemas e tabelas.
+4. Confira as tabelas no Adminer.
+
+Depois siga `docs/roadmap.md`, uma fase por vez. Os prompts prontos
+para conduzir cada etapa no Claude Code estão em `docs/prompts.md`.
+
+## Princípio
+Uma ferramenta nova por vez. Cada fase termina com algo funcionando
+antes de adicionar a próxima.

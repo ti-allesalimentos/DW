@@ -1,0 +1,28 @@
+# Ambiente
+.venv/
+venv/
+__pycache__/
+*.pyc
+.env
+
+# Credenciais e perfis locais
+transformacao/profiles.yml
+*.pem
+*.key
+
+# Saidas e trabalho
+logs/
+dados/
+target/
+dbt_packages/
+*.log
+
+# Legado preservado apenas como referencia local
+legado/**/__pycache__/
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Pacote de entrega (extraido e descartavel)
+*.tgz

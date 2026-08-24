@@ -1,0 +1,87 @@
+# =====================================================================
+# Fontes do bronze — espelho de tabelas do Protheus
+# ---------------------------------------------------------------------
+# Cada tabela e extraida UMA vez e serve a todos os dominios. Nada aqui
+# filtra, converte ou decide: regra de negocio vive na camada prata.
+#
+#   nome              identificador da fonte (usado no controle_cargas)
+#   tabela            tabela no SQL Server do Protheus
+#   destino           tabela no schema bronze
+#   chave             chave do MERGE. R_E_C_N_O_ e unico por tabela no
+#                     Protheus — resolve o incremental sem chave composta
+#   coluna_watermark  coluna de data para a carga incremental.
+#                     Ausente = carga full (dimensoes, baratas de recarregar)
+#   colunas           opcional. Padrao '*' — pouso fiel, e traz de graca
+#                     os campos customizados (_X_) da Alles
+# =====================================================================
+
+fontes:
+  # ---------- Comercial: notas de saida ----------
+  - nome: SD2010
+    tabela: SD2010
+    destino: bronze.sd2010
+    chave: R_E_C_N_O_
+    coluna_watermark: D2_EMISSAO
+    janela_movel_dias: 45
+
+  - nome: SF2010
+    tabela: SF2010
+    destino: bronze.sf2010
+    chave: R_E_C_N_O_
+    coluna_watermark: F2_EMISSAO
+    janela_movel_dias: 45
+
+  # ---------- Notas de entrada (devolucoes, compras, acordo comercial) ----------
+  - nome: SD1010
+    tabela: SD1010
+    destino: bronze.sd1010
+    chave: R_E_C_N_O_
+    coluna_watermark: D1_EMISSAO
+    janela_movel_dias: 45
+
+  - nome: SF1010
+    tabela: SF1010
+    destino: bronze.sf1010
+    chave: R_E_C_N_O_
+    coluna_watermark: F1_EMISSAO
+    janela_movel_dias: 45
+
+  # ---------- Pedidos de venda ----------
+  - nome: SC5010
+    tabela: SC5010
+    destino: bronze.sc5010
+    chave: R_E_C_N_O_
+    coluna_watermark: C5_EMISSAO
+    janela_movel_dias: 45
+
+  - nome: SC6010
+    tabela: SC6010
+    destino: bronze.sc6010
+    chave: R_E_C_N_O_
+    # SC6 nao tem data propria confiavel: recarga full enquanto o volume permitir.
+
+  # ---------- Cadastros (carga full: pequenos e mutaveis) ----------
+  - nome: SA1010          # clientes
+    tabela: SA1010
+    destino: bronze.sa1010
+    chave: R_E_C_N_O_
+
+  - nome: SA2010          # fornecedores
+    tabela: SA2010
+    destino: bronze.sa2010
+    chave: R_E_C_N_O_
+
+  - nome: SA3010          # vendedores e gerentes
+    tabela: SA3010
+    destino: bronze.sa3010
+    chave: R_E_C_N_O_
+
+  - nome: SB1010          # produtos
+    tabela: SB1010
+    destino: bronze.sb1010
+    chave: R_E_C_N_O_
+
+  - nome: SE4010          # condicoes de pagamento
+    tabela: SE4010
+    destino: bronze.se4010
+    chave: R_E_C_N_O_

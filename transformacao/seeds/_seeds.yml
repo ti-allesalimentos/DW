@@ -1,0 +1,43 @@
+version: 2
+
+seeds:
+  - name: map_produto_cx
+    description: >
+      De-para de conversao caixa -> quilo. Fonte unica da regra: substitui
+      o CASE repetido em oito queries do legado, que divergiam entre si.
+      Produto novo vendido em caixa = uma linha aqui, nada mais.
+    columns:
+      - name: produto_cx
+        tests: [unique, not_null]
+      - name: fator
+        tests: [not_null]
+
+  - name: excecoes_nf
+    description: >
+      Notas fiscais excluidas do faturamento. Estavam literais no WHERE das
+      queries do legado; aqui viram dado versionado, com motivo e origem.
+      As 38 herdadas ainda estao sem justificativa documentada.
+    columns:
+      - name: nfe
+        tests: [not_null]
+
+  - name: excecoes_cliente
+    description: Clientes excluidos do faturamento, com motivo e origem.
+
+  - name: cfops_venda
+    description: CFOPs que caracterizam venda. Regra de negocio, nao filtro tecnico.
+    columns:
+      - name: cfop
+        tests: [unique, not_null]
+
+  - name: cfops_devolucao
+    description: CFOPs que caracterizam devolucao de venda.
+    columns:
+      - name: cfop
+        tests: [unique, not_null]
+
+  - name: filiais_ativas
+    description: Filiais consideradas na analise comercial.
+    columns:
+      - name: filial
+        tests: [unique, not_null]

@@ -1,0 +1,38 @@
+version: 2
+
+models:
+  - name: stg_faturamento
+    description: >
+      Itens de nota fiscal de saida conformados, com as regras de negocio
+      explicitas aplicadas (CFOP, filial, exclusoes) e a conversao
+      caixa->quilo resolvida uma unica vez.
+    columns:
+      - name: recno_origem
+        description: R_E_C_N_O_ da SD2010. Rastreia a linha ate a origem.
+        tests: [unique, not_null]
+      - name: filial
+        tests: [not_null]
+      - name: nfe
+        tests: [not_null]
+      - name: dt_emissao
+        description: Data de emissao. Nunca anterior a entrada do Protheus.
+        tests: [not_null]
+      - name: cod_produto
+        description: Codigo base, ja sem o sufixo -CX.
+        tests: [not_null]
+      - name: chave_cliente
+        tests: [not_null]
+      - name: total
+        tests: [not_null]
+      - name: um
+        tests:
+          - accepted_values:
+              values: ['KG', 'UN', 'CX', 'PC', 'FD', 'LT']
+              config:
+                severity: warn
+    tests:
+      - dbt_utils.expression_is_true:
+          expression: "dt_emissao >= '2025-02-01'"
+          config:
+            severity: warn
+            error_if: ">1000"

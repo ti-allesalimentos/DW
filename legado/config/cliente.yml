@@ -1,0 +1,25 @@
+# Configuração por cliente — o "config as code" que torna o método replicável.
+# Para um cliente novo: copie este arquivo e ajuste os valores.
+cliente: alles
+descricao: "Cliente zero — Alles Alimentos"
+
+warehouse:
+  tipo: postgres          # postgres | clickhouse | duckdb
+  host: localhost
+  porta: 5432
+  database: alles_dw
+
+origem:
+  tipo: protheus_sqlserver
+  observacao: "Credenciais no .env (PROTHEUS_*)"
+
+dominios:
+  - nome: faturamento
+    grao: "item de nota fiscal"
+    fonte_sql: ingestion/queries/faturamento.sql
+    tabela_raw: raw.faturamento
+    fato: dw.fato_faturamento
+    dimensoes: [dim_produto, dim_familia, dim_cliente, dim_vendedor, dim_calendario]
+
+dashboards:
+  - faturamento

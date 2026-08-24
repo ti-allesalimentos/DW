@@ -1,0 +1,14 @@
+# ===== Extracao (Protheus -> bronze) =====
+python-dotenv>=1.0
+SQLAlchemy>=2.0
+psycopg2-binary>=2.9      # driver Postgres
+pyodbc>=5.1               # driver SQL Server (Protheus) - exige ODBC Driver 18
+pandas>=2.2
+PyYAML>=6.0
+
+# ===== Transformacao (bronze -> prata -> ouro) =====
+dbt-core>=1.8
+dbt-postgres>=1.8
+
+# ===== Apoio =====
+openpyxl>=3.1             # leitura pontual de planilhas durante a migracao

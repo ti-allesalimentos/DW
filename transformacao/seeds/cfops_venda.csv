@@ -1,0 +1,16 @@
+cfop,descricao
+5101,Venda de producao do estabelecimento (dentro do estado)
+5102,Venda de mercadoria adquirida de terceiros (dentro do estado)
+5109,Venda de producao para zona franca / area de livre comercio
+5401,Venda de producao com substituicao tributaria (dentro do estado)
+5403,Venda de mercadoria de terceiros com ST (dentro do estado)
+6101,Venda de producao do estabelecimento (fora do estado)
+6102,Venda de mercadoria adquirida de terceiros (fora do estado)
+6107,Venda de producao para nao contribuinte (fora do estado)
+6108,Venda de mercadoria de terceiros para nao contribuinte (fora do estado)
+6109,Venda de producao para zona franca / area de livre comercio
+6110,Venda de mercadoria de terceiros para zona franca
+6118,Venda de producao entregue por conta e ordem
+6401,Venda de producao com ST (fora do estado)
+6403,Venda de mercadoria de terceiros com ST (fora do estado)
+6501,Remessa de producao com fim especifico de exportacao

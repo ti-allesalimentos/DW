@@ -1,0 +1,53 @@
+version: 2
+
+sources:
+  - name: bronze
+    description: >
+      Espelho fiel das tabelas do Protheus, carregado pelo extrator.
+      Sem TRIM, sem filtro, sem regra. Campos texto vem com o padding
+      CHAR de largura fixa do Protheus.
+    schema: bronze
+    loaded_at_field: _carregado_em
+    freshness:
+      # A carga e intradiaria: mais de 6h sem dado novo e sinal de falha.
+      warn_after: {count: 6, period: hour}
+      error_after: {count: 24, period: hour}
+    tables:
+      - name: sd2010
+        description: Itens de nota fiscal de saida (faturamento).
+        columns:
+          - name: r_e_c_n_o_
+            description: Chave unica da tabela no Protheus. Chave do MERGE.
+            tests: [unique, not_null]
+      - name: sf2010
+        description: Cabecalho da nota fiscal de saida.
+        columns:
+          - name: r_e_c_n_o_
+            tests: [unique, not_null]
+      - name: sd1010
+        description: Itens de nota fiscal de entrada (devolucoes, compras, acordo).
+        columns:
+          - name: r_e_c_n_o_
+            tests: [unique, not_null]
+      - name: sf1010
+        description: Cabecalho da nota fiscal de entrada.
+        columns:
+          - name: r_e_c_n_o_
+            tests: [unique, not_null]
+      - name: sc5010
+        description: Pedidos de venda (cabecalho).
+        columns:
+          - name: r_e_c_n_o_
+            tests: [unique, not_null]
+      - name: sc6010
+        description: Itens do pedido de venda.
+      - name: sa1010
+        description: Cadastro de clientes.
+      - name: sa2010
+        description: Cadastro de fornecedores.
+      - name: sa3010
+        description: Cadastro de vendedores e gerentes.
+      - name: sb1010
+        description: Cadastro de produtos.
+      - name: se4010
+        description: Condicoes de pagamento.

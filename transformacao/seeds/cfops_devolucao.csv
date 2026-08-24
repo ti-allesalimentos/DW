@@ -1,0 +1,14 @@
+cfop,descricao
+1201,Devolucao de venda de producao (dentro do estado)
+1202,Devolucao de venda de mercadoria de terceiros (dentro do estado)
+1203,Devolucao de venda de producao para zona franca
+1410,Devolucao de venda de producao com ST (dentro do estado)
+1411,Devolucao de venda de mercadoria de terceiros com ST (dentro do estado)
+1903,Entrada de mercadoria remetida para industrializacao
+2201,Devolucao de venda de producao (fora do estado)
+2202,Devolucao de venda de mercadoria de terceiros (fora do estado)
+2203,Devolucao de venda de producao para zona franca
+2410,Devolucao de venda de producao com ST (fora do estado)
+2411,Devolucao de venda de mercadoria de terceiros com ST (fora do estado)
+2551,Compra de bem para o ativo imobilizado
+2911,Entrada de bem remetido para demonstracao

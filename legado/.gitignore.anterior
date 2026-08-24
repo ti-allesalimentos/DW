@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+# dados
+data/
+*.xlsx
+*.xlsm
+# dbt
+dbt/target/
+dbt/logs/
+dbt/dbt_packages/
+# dagster
+dagster/.dagster/

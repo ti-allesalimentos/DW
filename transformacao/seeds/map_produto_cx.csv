@@ -1,0 +1,11 @@
+produto_cx,produto_base,fator,unidade_destino,fonte,observacao
+PA01010001-CX,PA01010001,10,KG,todas as fontes,consenso
+PA01010002-CX,PA01010002,4,KG,PEDIDOSDEVENDACONSOLIDADO,AUSENTE do map_produto_cx anterior
+PA01010005-CX,PA01010005,10,KG,todas as fontes,consenso
+PA01010006-CX,PA01010006,9.6,KG,todas as fontes,consenso
+PA01010011-CX,PA01010011,10,KG,maioria das fontes,ausente do CLAUDE.md do relatorio semanal
+PA01020002-CX,PA01020002,4,KG,fFaturamento e PEDIDOSDEVENDACONSOLIDADO,AUSENTE do map_produto_cx anterior
+PA01020010-CX,PA01020010,2.016,KG,todas as fontes,consenso
+PA01020012-CX,PA01020012,4,KG,todas as fontes,consenso
+PA01020021-CX,PA01020021,2.016,KG,todas as fontes,consenso
+PA01020034-CX,PA01020034,13.44,KG,apenas query de devolucoes do fFaturamento,ausente da query de faturamento

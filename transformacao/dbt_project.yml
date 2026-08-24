@@ -1,0 +1,26 @@
+name: alles_dw
+version: 1.0.0
+config-version: 2
+
+profile: alles_dw
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+target-path: "target"
+clean-targets: ["target", "dbt_packages"]
+
+models:
+  alles_dw:
+    prata:
+      +schema: prata
+      +materialized: view
+    ouro:
+      +schema: ouro
+      +materialized: table
+
+seeds:
+  alles_dw:
+    +schema: prata
+    +quote_columns: false
