@@ -86,6 +86,11 @@ def _garantir_tabela(cx, schema: str, tabela: str, staging: str, chave: str) -> 
         CREATE TABLE IF NOT EXISTS {schema}.{tabela}
         (LIKE {schema}.{staging} INCLUDING DEFAULTS)
     """))
+    cx.execute(text(f"""
+        ALTER TABLE {schema}.{tabela}
+            ADD COLUMN IF NOT EXISTS "_deletado" boolean NOT NULL DEFAULT false,
+            ADD COLUMN IF NOT EXISTS "_deletado_em" timestamptz
+    """))
     tem_pk = cx.execute(text("""
         SELECT 1 FROM pg_constraint c
         JOIN pg_class t ON t.oid = c.conrelid
@@ -113,7 +118,34 @@ def _garantir_tabela(cx, schema: str, tabela: str, staging: str, chave: str) -> 
             print(f"    coluna nova em {tabela}: {coluna} ({tipo})")
 
 
-def _gravar(pg: Engine, df: pd.DataFrame, destino: str, chave: str) -> int:
+def _marcar_ausentes(cx, schema: str, tabela: str, staging: str, chave: str,
+                      coluna_watermark: str | None, de: date | None, ate: date | None) -> None:
+    """Marca como ausentes as linhas que sumiram da janela recem-extraida.
+
+    Cobre o cancelamento de NF: se a chave nao voltou nesta leitura da janela
+    (ou da tabela inteira, em modo full), ela nao existe mais na origem. Nao
+    apaga a linha — so sinaliza `_deletado`, preservando o pouso fiel.
+    """
+    escopo, parametros = "TRUE", {}
+    if coluna_watermark and de and ate:
+        # Datas no Protheus sao texto YYYYMMDD (ver montar_sql) — a coluna
+        # espelhada no bronze preserva esse tipo, entao a comparacao aqui
+        # tambem precisa ser textual, nao um date do Python.
+        escopo = f'"{coluna_watermark}" BETWEEN :de AND :ate'
+        parametros = {"de": f"{de:%Y%m%d}", "ate": f"{ate:%Y%m%d}"}
+    cx.execute(text(f"""
+        UPDATE {schema}.{tabela} AS t
+        SET "_deletado" = true, "_deletado_em" = now()
+        WHERE {escopo}
+          AND t."_deletado" = false
+          AND NOT EXISTS (
+              SELECT 1 FROM {schema}.{staging} s WHERE s."{chave}" = t."{chave}"
+          )
+    """), parametros)
+
+
+def _gravar(pg: Engine, df: pd.DataFrame, destino: str, chave: str, *,
+            coluna_watermark: str | None, de: date | None, ate: date | None) -> int:
     """Grava em staging e faz MERGE na tabela definitiva do bronze.
 
     O MERGE roda em transacao unica: falha no meio nao deixa bronze parcial,
@@ -132,10 +164,14 @@ def _gravar(pg: Engine, df: pd.DataFrame, destino: str, chave: str) -> int:
     with pg.begin() as cx:
         _garantir_tabela(cx, schema, tabela, staging, chave)
         resultado = cx.execute(text(f"""
-            INSERT INTO {schema}.{tabela} ({lista})
-            SELECT {lista} FROM {schema}.{staging}
-            ON CONFLICT ("{chave}") DO UPDATE SET {atualiza}
+            INSERT INTO {schema}.{tabela} ({lista}, "_deletado", "_deletado_em")
+            SELECT {lista}, false, NULL FROM {schema}.{staging}
+            ON CONFLICT ("{chave}") DO UPDATE SET
+                {atualiza}, "_deletado" = false, "_deletado_em" = NULL
         """))
+        coluna_watermark_normalizada = coluna_watermark.lower() if coluna_watermark else None
+        _marcar_ausentes(cx, schema, tabela, staging, chave,
+                          coluna_watermark_normalizada, de, ate)
         cx.execute(text(f"DROP TABLE IF EXISTS {schema}.{staging}"))
     return resultado.rowcount or len(df)
 
@@ -147,14 +183,12 @@ def extrair(fonte: dict, *, modo: str, de: date | None, ate: date | None,
     try:
         sql = montar_sql(fonte, de, ate)
         print(f"  [{nome}] lendo do Protheus...", flush=True)
-        df = pd.read_sql(sql, pr)
+        df = _normalizar(pd.read_sql(sql, pr))
         lidas = len(df)
-        if lidas == 0:
-            print(f"  [{nome}] nada a gravar.")
-            watermark.fechar(pg, execucao, lidas=0, gravadas=0)
-            return
-        df = _normalizar(df)
-        gravadas = _gravar(pg, df, fonte["destino"], fonte["chave"].lower())
+        # Mesmo com 0 linhas lidas, _gravar roda: e o caso em que tudo o que
+        # estava na janela foi cancelado na origem e precisa ser marcado.
+        gravadas = _gravar(pg, df, fonte["destino"], fonte["chave"].lower(),
+                            coluna_watermark=fonte.get("coluna_watermark"), de=de, ate=ate)
         watermark.fechar(pg, execucao, lidas=lidas, gravadas=gravadas)
         print(f"  [{nome}] {lidas:,} lidas / {gravadas:,} gravadas.")
     except Exception:
