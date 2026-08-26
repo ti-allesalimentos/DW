@@ -27,12 +27,14 @@ models:
       - name: um
         tests:
           - accepted_values:
-              values: ['KG', 'UN', 'CX', 'PC', 'FD', 'LT']
+              arguments:
+                values: ['KG', 'UN', 'CX', 'PC', 'FD', 'LT']
               config:
                 severity: warn
     tests:
       - dbt_utils.expression_is_true:
-          expression: "dt_emissao >= '2025-02-01'"
+          arguments:
+            expression: "dt_emissao >= '2025-02-01'"
           config:
             severity: warn
             error_if: ">1000"

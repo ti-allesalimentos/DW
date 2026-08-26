@@ -17,27 +17,78 @@ seeds:
       Notas fiscais excluidas do faturamento. Estavam literais no WHERE das
       queries do legado; aqui viram dado versionado, com motivo e origem.
       As 38 herdadas ainda estao sem justificativa documentada.
+    config:
+      # filial e nfe tem zero a esquerda no Protheus (ex.: '01004', '000029000').
+      # Sem isso o dbt infere integer e o zero e perdido, quebrando todo join com o bronze.
+      column_types:
+        filial: varchar
+        nfe: varchar
     columns:
+      - name: filial
+        tests: [not_null]
       - name: nfe
         tests: [not_null]
 
   - name: excecoes_cliente
     description: Clientes excluidos do faturamento, com motivo e origem.
+    config:
+      column_types:
+        cod_cliente: varchar
+    columns:
+      - name: cod_cliente
+        tests: [unique, not_null]
 
   - name: cfops_venda
     description: CFOPs que caracterizam venda. Regra de negocio, nao filtro tecnico.
+    config:
+      column_types:
+        cfop: varchar
     columns:
       - name: cfop
         tests: [unique, not_null]
 
   - name: cfops_devolucao
     description: CFOPs que caracterizam devolucao de venda.
+    config:
+      column_types:
+        cfop: varchar
     columns:
       - name: cfop
         tests: [unique, not_null]
 
   - name: filiais_ativas
     description: Filiais consideradas na analise comercial.
+    config:
+      column_types:
+        filial: varchar
     columns:
       - name: filial
+        tests: [unique, not_null]
+
+  - name: familia
+    description: >
+      Familia, marca e sub-recorte por produto. Fonte: aba dFamilia do
+      fManual.xlsx (P:\T.I\01. BASES), agora versionada aqui.
+    columns:
+      - name: cod_produto
+        tests: [unique, not_null]
+
+  - name: regiao
+    description: "Regiao geografica por estado. Fonte: aba dRegiao do fManual.xlsx."
+    columns:
+      - name: estado
+        tests: [unique, not_null]
+      - name: uf
+        tests: [unique, not_null]
+
+  - name: destino
+    description: "Destino da mercadoria (estoque, refaturamento, perda). Fonte: aba dDestino do fManual.xlsx."
+    columns:
+      - name: sigla
+        tests: [unique, not_null]
+
+  - name: motivo_dev
+    description: "Motivo de devolucao de venda, com area responsavel. Fonte: aba dMotivoDev do fManual.xlsx."
+    columns:
+      - name: sigla
         tests: [unique, not_null]
