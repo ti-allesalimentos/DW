@@ -38,18 +38,24 @@ legado/          código anterior, preservado como referência
 ## Início rápido
 
 ```bash
-cp .env.example .env            # e preencha
-python -m venv .venv && .venv/Scripts/activate     # Windows
+cp .env.example .env               # e preencha
+python -m venv .venv
+source .venv/Scripts/activate      # Windows, Git Bash
 pip install -r requirements.txt
 
 docker compose -f infra/docker-compose.yml up -d
-psql -f infra/sql/00_schemas.sql
-psql -f infra/sql/01_controle_cargas.sql
+docker exec -i alles_dw_postgres psql -U alles -d alles_dw < infra/sql/00_schemas.sql
+docker exec -i alles_dw_postgres psql -U alles -d alles_dw < infra/sql/01_controle_cargas.sql
 
 python -m extracao.carga --listar          # confere o plano
 python -m extracao.carga --fonte SB1010    # primeira carga, tabela pequena
 
-cd transformacao && dbt deps && dbt seed && dbt build
+cd transformacao
+cp profiles.yml.example profiles.yml
+export DBT_PROFILES_DIR=.
+dotenv -f ../.env run -- dbt deps
+dotenv -f ../.env run -- dbt seed
+dotenv -f ../.env run -- dbt build
 ```
 
 Passo a passo completo e o que fazer quando algo falha: `docs/execucao.md`.

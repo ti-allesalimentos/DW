@@ -16,7 +16,7 @@ está no `.gitignore` e nunca deve ser versionado.
 
 ```bash
 python -m venv .venv
-.venv\Scripts\activate          # Windows
+source .venv/Scripts/activate    # Windows, Git Bash — use .venv\Scripts\activate no cmd/PowerShell
 pip install -r requirements.txt
 ```
 
@@ -32,13 +32,25 @@ docker compose -f infra/docker-compose.yml up -d
 Postgres na porta do `.env` (padrão 5433, para não colidir com uma instância
 local em 5432) e Adminer em http://localhost:8080.
 
+A maioria das máquinas não tem `psql` instalado fora do container — rode os
+scripts direto nele (o nome do container é `alles_dw_postgres`, definido no
+`docker-compose.yml`; confira com `docker ps` se subiu com outro nome):
+
+```bash
+docker exec -i alles_dw_postgres psql -U alles -d alles_dw < infra/sql/00_schemas.sql
+docker exec -i alles_dw_postgres psql -U alles -d alles_dw < infra/sql/01_controle_cargas.sql
+```
+
+Se tiver `psql` local instalado, também funciona direto:
+
 ```bash
 psql -h localhost -p 5433 -U alles -d alles_dw -f infra/sql/00_schemas.sql
 psql -h localhost -p 5433 -U alles -d alles_dw -f infra/sql/01_controle_cargas.sql
 ```
 
-Confira: `\dn` deve listar `bronze`, `prata`, `ouro` — e ainda `raw` e `dw`, do
-piloto anterior, que ficam intactos como referência de comparação.
+Confira (dentro do `psql`, local ou via `docker exec -it alles_dw_postgres psql -U alles -d alles_dw`):
+`\dn` deve listar `bronze`, `prata`, `ouro` — e ainda `raw` e `dw`, do piloto
+anterior, que ficam intactos como referência de comparação.
 
 ## 3. Carga
 
@@ -92,20 +104,44 @@ python -m extracao.carga
 
 Cada fonte com watermark reprocessa os últimos 45 dias (`JANELA_MOVEL_DIAS`).
 A janela existe porque nota fiscal é cancelada, corrigida e lançada com data
-retroativa — sem ela, essas alterações nunca chegariam ao bronze.
+retroativa — sem ela, essas alterações nunca chegariam ao bronze. Notas que
+somem da janela (canceladas) não são apagadas do bronze: ficam marcadas em
+`_deletado`/`_deletado_em`.
+
+`--carga-inicial` sem `--fonte` roda o histórico completo de **todas** as
+fontes, em lotes anuais para as incrementais e carga cheia para as
+dimensões — é o que popula o bronze pela primeira vez. Sigam-se as mesmas
+regras de segurança acima.
 
 ## 4. Transformação
 
+O dbt precisa de um `profiles.yml` local (nunca versionado) e das variáveis
+do `.env` no ambiente — ele não lê o `.env` sozinho como o extrator Python.
+
 ```bash
 cd transformacao
-dbt deps
-dbt seed          # carrega as regras versionadas (CSV) na prata
-dbt build         # roda modelos + testes
-dbt docs generate && dbt docs serve   # grafo de linhagem
+cp profiles.yml.example profiles.yml   # aponta pro Postgres via env_var()
+export DBT_PROFILES_DIR=.
+```
+
+Para carregar o `.env` sem quebrar o shell (o arquivo tem um caminho de rede
+do Windows com espaço, que o `source` do bash não interpreta bem), use o
+`dotenv` CLI que já vem com o `python-dotenv`:
+
+```bash
+dotenv -f ../.env run -- dbt deps
+dotenv -f ../.env run -- dbt seed              # carrega as regras versionadas (CSV) na prata
+dotenv -f ../.env run -- dbt build             # roda seeds + modelos + testes
+dotenv -f ../.env run -- dbt source freshness  # confere se alguma fonte parou de carregar
+dotenv -f ../.env run -- dbt docs generate && dotenv -f ../.env run -- dbt docs serve
 ```
 
 `dbt build` verde é o critério de aceite: se um teste de chave ou de not-null
 falha, o dado não sobe.
+
+Se `dbt --version` falhar com `UnserializableField` do `mashumaro`, é um bug
+de versão conhecido entre o `dbt-core` 1.11 e o `mashumaro` 3.14 — o
+`requirements.txt` já fixa uma versão mais nova que corrige.
 
 ## 5. Quando falha
 
