@@ -1,0 +1,28 @@
+version: 2
+
+models:
+  - name: dim_calendario
+    description: >
+      Dimensao calendario gerada por codigo, substitui o dCalendario.xlsx.
+      Cobre 2015-01-01 a 2035-12-31. Logica fiel ao Power Query legado
+      (docs/legado_m/dCalendario.m), incluindo a regra de ano fiscal
+      herdada — ver comentario no topo do modelo.
+    columns:
+      - name: data
+        tests: [unique, not_null]
+      - name: ano
+        tests: [not_null]
+      - name: mes
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+      - name: dia_util
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [0, 1]
+      - name: ano_fiscal
+        tests: [not_null]
