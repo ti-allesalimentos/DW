@@ -26,3 +26,97 @@ models:
                 values: [0, 1]
       - name: ano_fiscal
         tests: [not_null]
+
+  - name: dim_produto
+    description: >
+      Produto conformado (grao do cod_produto ja pos de-para -CX), com
+      familia/marca/sub-recorte do seed familia. Inclui membro
+      "NAO_IDENTIFICADO" para produto sem cadastro ativo no SB1010.
+    columns:
+      - name: sk_produto
+        tests: [unique, not_null]
+      - name: cod_produto
+        tests: [unique, not_null]
+
+  - name: dim_cliente
+    description: >
+      Cliente conformado (grao cod_cliente || loja), com regiao do seed
+      regiao via UF. Inclui membro "NAO_IDENTIFICADO" para os ~0,7% do
+      historico DATAVALE sem match de CNPJ contra o SA1010.
+    columns:
+      - name: sk_cliente
+        tests: [unique, not_null]
+      - name: chave_cliente
+        tests: [unique, not_null]
+
+  - name: dim_vendedor
+    description: >
+      Vendedor conformado (grao cod_vendedor, normalizado numericamente
+      porque o SA3010 tem o mesmo codigo com padding inconsistente).
+      Inclui membro "NAO_IDENTIFICADO".
+    columns:
+      - name: sk_vendedor
+        tests: [unique, not_null]
+      - name: cod_vendedor
+        tests: [unique, not_null]
+
+  - name: fato_faturamento
+    description: >
+      Fato faturamento — Protheus (SD2010). Grao: item de nota fiscal de
+      saida. Chaves substitutas resolvidas contra dim_cliente/dim_produto/
+      dim_vendedor; sem match cai no membro "NAO_IDENTIFICADO" de cada
+      dimensao (nunca fica orfao silencioso).
+    columns:
+      - name: recno_origem
+        tests: [unique, not_null]
+      - name: sk_cliente
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_cliente')
+                field: sk_cliente
+      - name: sk_produto
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_produto')
+                field: sk_produto
+      - name: sk_vendedor
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_vendedor')
+                field: sk_vendedor
+      - name: total
+        tests: [not_null]
+
+  - name: fato_faturamento_datavale
+    description: >
+      Fato faturamento — historico DATAVALE (02/2024 a 01/2025). Grao:
+      linha de venda (sem CFOP/serie/item — o DATAVALE nao guarda isso).
+      Mantido separado de fato_faturamento ate o grao comum ser definido.
+    columns:
+      - name: sk_cliente
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_cliente')
+                field: sk_cliente
+      - name: sk_produto
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_produto')
+                field: sk_produto
+      - name: sk_vendedor
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_vendedor')
+                field: sk_vendedor

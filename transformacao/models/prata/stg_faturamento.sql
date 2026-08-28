@@ -60,44 +60,64 @@ com_conversao as (
     left join {{ ref('map_produto_cx') }} m
            on m.produto_cx = i.cod_protheus
 
+),
+
+sa1010_dedup as (
+
+    -- O vendedor da nota nao vem do item (SD2 nao tem campo de vendedor);
+    -- vem do cadastro do cliente (A1_VEND), igual a query legada. Um
+    -- cliente+loja e unico no SA1010, mas o bronze traz o historico bruto
+    -- (pode ter mais de um registro por chave se o cadastro foi alterado).
+    select distinct on (cod_cliente, loja_cliente)
+        {{ trim_protheus('a1_cod') }}  as cod_cliente,
+        {{ trim_protheus('a1_loja') }} as loja_cliente,
+        {{ trim_protheus('a1_vend') }} as cod_vendedor
+    from {{ source('bronze', 'sa1010') }}
+    where d_e_l_e_t_ <> '*'
+    order by cod_cliente, loja_cliente, _carregado_em desc
+
 )
 
 select
-    filial,
-    nfe,
-    serie,
-    item_nf,
-    cod_protheus,
-    cod_produto,
-    cod_cliente || loja_cliente                       as chave_cliente,
-    cod_cliente,
-    loja_cliente,
-    num_pedido,
-    cfop,
-    dt_emissao,
-    qtd_origem * fator_conversao                      as qtd,
-    case when convertido then 'KG' else um_origem end as um,
-    fator_conversao,
-    convertido,
-    total,
-    desconto_zfr,
+    c.filial,
+    c.nfe,
+    c.serie,
+    c.item_nf,
+    c.cod_protheus,
+    c.cod_produto,
+    c.cod_cliente || c.loja_cliente                     as chave_cliente,
+    c.cod_cliente,
+    c.loja_cliente,
+    sa1.cod_vendedor,
+    c.num_pedido,
+    c.cfop,
+    c.dt_emissao,
+    c.qtd_origem * c.fator_conversao                    as qtd,
+    case when c.convertido then 'KG' else c.um_origem end as um,
+    c.fator_conversao,
+    c.convertido,
+    c.total,
+    c.desconto_zfr,
     -- Preco unitario bruto: o desconto ZFR ja vem embutido no total,
     -- entao volta para o calculo. Regra herdada do modelo atual.
-    (total + coalesce(desconto_zfr, 0))
-        / nullif(qtd_origem * fator_conversao, 0)     as preco_unit,
-    aliq_icms,
-    aliq_pis,
-    aliq_cofins,
-    aliq_icmsst,
-    recno_origem,
-    _carregado_em
-from com_conversao
-where cfop in (select cfop from {{ ref('cfops_venda') }})
-  and filial in (select filial from {{ ref('filiais_ativas') }})
-  and cod_cliente not in (select cod_cliente from {{ ref('excecoes_cliente') }})
+    (c.total + coalesce(c.desconto_zfr, 0))
+        / nullif(c.qtd_origem * c.fator_conversao, 0)   as preco_unit,
+    c.aliq_icms,
+    c.aliq_pis,
+    c.aliq_cofins,
+    c.aliq_icmsst,
+    c.recno_origem,
+    c._carregado_em
+from com_conversao c
+left join sa1010_dedup sa1
+    on sa1.cod_cliente = c.cod_cliente
+   and sa1.loja_cliente = c.loja_cliente
+where c.cfop in (select cfop from {{ ref('cfops_venda') }})
+  and c.filial in (select filial from {{ ref('filiais_ativas') }})
+  and c.cod_cliente not in (select cod_cliente from {{ ref('excecoes_cliente') }})
   and not exists (
         select 1
         from {{ ref('excecoes_nf') }} e
-        where e.filial = com_conversao.filial
-          and e.nfe    = com_conversao.nfe
+        where e.filial = c.filial
+          and e.nfe    = c.nfe
   )
