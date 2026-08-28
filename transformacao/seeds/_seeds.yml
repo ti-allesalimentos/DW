@@ -92,3 +92,28 @@ seeds:
     columns:
       - name: sigla
         tests: [unique, not_null]
+
+  - name: f_faturamento_datavale
+    description: >
+      Historico de faturamento do DATAVALE (ERP anterior ao Protheus),
+      periodo 02/2024 a 01/2025. Fonte: aba fFaturamentoDataVale do
+      fManual.xlsx, cujas 12 colunas vinham sem nome ("Coluna 1".."Coluna
+      12") — recuperados de uma linha de cabecalho original que ficou
+      embutida no meio dos dados (linha ~786), removida na extracao.
+      Filial e codigo de produto ja usam a mesma codificacao do Protheus;
+      cliente precisa de de-para por CNPJ (chave_cliente = raiz+filial,
+      12 digitos, sem digito verificador) contra bronze.sa1010.a1_cgc.
+    config:
+      column_types:
+        filial_venda: varchar
+        seq_nota_fiscal: varchar
+        cod_produto_venda: varchar
+        cod_vendedor: varchar
+        chave_cliente: varchar
+    columns:
+      - name: filial_venda
+        tests: [not_null]
+      - name: cod_produto_venda
+        tests: [not_null]
+      - name: dt_emissao
+        tests: [not_null]

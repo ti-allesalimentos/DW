@@ -38,3 +38,31 @@ models:
           config:
             severity: warn
             error_if: ">1000"
+
+  - name: stg_faturamento_datavale
+    description: >
+      Historico de faturamento do DATAVALE (ERP anterior ao Protheus,
+      02/2024 a 01/2025), com cliente e vendedor resolvidos contra o
+      cadastro atual. Ainda nao unificado com stg_faturamento — grao e
+      colunas diferem (sem CFOP, sem serie/item de NF, sem impostos).
+    columns:
+      - name: filial
+        tests: [not_null]
+      - name: cod_produto
+        tests: [not_null]
+      - name: dt_emissao
+        tests: [not_null]
+      - name: chave_cliente
+        tests: [not_null]
+    tests:
+      - dbt_utils.expression_is_true:
+          arguments:
+            # Taxa de casamento por CNPJ medida em 28/08/2026: 99,3%
+            # (cerca de 216 das 30.827 linhas sem match). Um teste de
+            # not_null puro quebraria a cada carga; o limite absoluto
+            # abaixo da margem de ~1000 linhas antes de investigar
+            # regressao no de-para.
+            expression: "chave_cliente <> 'NAO_IDENTIFICADO'"
+          config:
+            severity: warn
+            error_if: ">1000"
