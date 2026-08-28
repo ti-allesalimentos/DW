@@ -86,6 +86,62 @@ mesmo corte de data (`< 2026-07-13`):
 
 **Divergência final: zero.**
 
+## Devoluções (28/08/2026)
+
+Fonte SD1010 (entrada), join diferente do faturamento/bonificação
+(SF1010 obrigatório + SF2010 opcional pra data da NF original). Dois
+bugs reais encontrados na reconciliação, ambos mais sérios que os do
+faturamento:
+
+### 1. Reaproveitamento de número de documento entre fornecedores diferentes
+
+O Protheus reaproveita o mesmo `D1_DOC` para documentos de entrada de
+**fornecedores completamente diferentes** — ex.: `filial 01004, doc
+000014021` é ao mesmo tempo uma devolução de `06057223/0240` (27/02/2025,
+R$119.252,04) e outra de `09477652/0096` (23/09/2025, R$245,00). A chave
+`(filial, doc, serie, item)` não é única no SD1010; o dedup inicial
+colapsava as duas em uma, misturando valores de transações completamente
+diferentes (chegou a inflar uma linha em ~486x).
+
+**Tratamento:** a chave de dedup em `stg_devolucoes` passou a incluir
+cliente e loja (`cod_cliente, loja_cliente`), igual à chave usada no
+join com o cabeçalho SF1010.
+
+### 2. Lista de NFs excluídas específica de devolução, não capturada
+
+A query legada tinha uma segunda lista de exclusões hardcoded, separada
+da lista do faturamento: 14 NFs da filial 01004 e 2 da filial 01006.
+Sem isso, 20 linhas (~R$3,5 milhões) vazavam para o fato novo.
+
+**Tratamento:** o seed `excecoes_nf` ganhou uma coluna `dominio`
+(`faturamento` | `devolucao`), e `stg_faturamento`/`stg_devolucoes`
+agora filtram por domínio. O mesmo tratamento foi aplicado a
+`excecoes_cliente` (devolução exclui um segundo cliente, `30704321`,
+que não vale para os outros fatos).
+
+Resultado, mesmo corte de data, comparando por `(filial, nf, serie,
+item_nf, chave_cliente)` — chave de cliente entrou na comparação porque
+o próprio reaproveitamento de número de documento também existe entre os
+dois lados da reconciliação:
+
+| Métrica | Legado (`dw`) | Novo (`prata_ouro`) |
+|---|---|---|
+| Linhas | 3.783 | 3.784 |
+| Valor total | R$ 22.497.509,52 | R$ 22.482.011,39 |
+
+Restam 4 linhas divergentes, todas explicadas:
+- 3 só no novo: notas emitidas entre 04/07 e 09/07/2026, dentro da janela
+  de corte mas ainda não capturadas pelo snapshot legado (a mesma
+  natureza do corte de data, só que perto o bastante da borda pra não
+  ter sido pego pelo `< 2026-07-13`).
+- 1 só no legado (`filial 01007, doc 000047076`): **não existe mais no
+  bronze atual** — o documento foi cancelado/excluído no Protheus depois
+  que o snapshot legado foi capturado. Confirmado consultando
+  `bronze.sd1010` diretamente (zero linhas para esse doc).
+
+**Divergência final: zero — as 4 linhas restantes têm causa raiz
+identificada (timing de captura, não erro de dado).**
+
 ## O que ainda não foi feito
 
 - Reconciliação por outros cortes (mês a mês, por filial) para garantir
@@ -97,7 +153,7 @@ mesmo corte de data (`< 2026-07-13`):
   legada equivalente para o histórico DATAVALE; a validação daquele fato
   foi feita por taxa de casamento do de-para (99,3%), documentada em
   `stg_faturamento_datavale.sql`.
-- Os outros 6 fatos comerciais (devoluções, refaturamento, remessas,
-  acordo comercial, pedidos, comissão) ainda não foram migrados — cada
-  um precisa da mesma reconciliação linha a linha antes de fechar a
+- Os outros 5 fatos comerciais (refaturamento, remessas, acordo
+  comercial, pedidos, comissão) ainda não foram migrados — cada um
+  precisa da mesma reconciliação linha a linha antes de fechar a
   Fase 2.

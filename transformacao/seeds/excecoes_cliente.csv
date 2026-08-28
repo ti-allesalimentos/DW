@@ -1,2 +1,3 @@
-cod_cliente,motivo,origem
-97316293,(nao documentado) excluido do faturamento em todas as queries do legado,fFaturamento.xlsx
+cod_cliente,dominio,motivo,origem
+97316293,todos,(nao documentado) excluido de faturamento/bonificacao/devolucao em todas as queries do legado,fFaturamento.xlsx
+30704321,devolucao,(nao documentado) excluido so da query de devolucoes no legado,fFaturamento.xlsx

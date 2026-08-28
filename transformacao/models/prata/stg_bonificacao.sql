@@ -122,5 +122,8 @@ left join sa1010_dedup sa1
    and sa1.loja_cliente = c.loja_cliente
 where c.cfop in (select cfop from {{ ref('cfops_bonificacao') }})
   and c.filial in (select filial from {{ ref('filiais_ativas') }})
-  and c.cod_cliente not in (select cod_cliente from {{ ref('excecoes_cliente') }})
+  and c.cod_cliente not in (
+        select cod_cliente from {{ ref('excecoes_cliente') }}
+        where dominio in ('todos', 'bonificacao')
+  )
   and sf2.tipo_nf <> 'B'

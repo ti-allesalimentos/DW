@@ -14,9 +14,10 @@ seeds:
 
   - name: excecoes_nf
     description: >
-      Notas fiscais excluidas do faturamento. Estavam literais no WHERE das
-      queries do legado; aqui viram dado versionado, com motivo e origem.
-      As 38 herdadas ainda estao sem justificativa documentada.
+      Notas fiscais excluidas, por dominio (faturamento ou devolucao).
+      Estavam literais no WHERE das queries do legado; aqui viram dado
+      versionado, com motivo e origem. As herdadas ainda estao sem
+      justificativa documentada.
     config:
       # filial e nfe tem zero a esquerda no Protheus (ex.: '01004', '000029000').
       # Sem isso o dbt infere integer e o zero e perdido, quebrando todo join com o bronze.
@@ -28,15 +29,29 @@ seeds:
         tests: [not_null]
       - name: nfe
         tests: [not_null]
+      - name: dominio
+        tests: [not_null]
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [filial, nfe, dominio]
 
   - name: excecoes_cliente
-    description: Clientes excluidos do faturamento, com motivo e origem.
+    description: >
+      Clientes excluidos por dominio (faturamento/bonificacao/devolucao),
+      com motivo e origem. "todos" vale pra qualquer dominio.
     config:
       column_types:
         cod_cliente: varchar
     columns:
       - name: cod_cliente
-        tests: [unique, not_null]
+        tests: [not_null]
+      - name: dominio
+        tests: [not_null]
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [cod_cliente, dominio]
 
   - name: cfops_venda
     description: CFOPs que caracterizam venda. Regra de negocio, nao filtro tecnico.

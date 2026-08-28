@@ -167,11 +167,15 @@ join sf2010_dedup sf2
    and sf2.nfe = c.nfe
 where c.cfop in (select cfop from {{ ref('cfops_venda') }})
   and c.filial in (select filial from {{ ref('filiais_ativas') }})
-  and c.cod_cliente not in (select cod_cliente from {{ ref('excecoes_cliente') }})
+  and c.cod_cliente not in (
+        select cod_cliente from {{ ref('excecoes_cliente') }}
+        where dominio in ('todos', 'faturamento')
+  )
   and sf2.tipo_nf <> 'B'
   and not exists (
         select 1
         from {{ ref('excecoes_nf') }} e
         where e.filial = c.filial
           and e.nfe    = c.nfe
+          and e.dominio = 'faturamento'
   )

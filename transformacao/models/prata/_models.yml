@@ -54,6 +54,21 @@ models:
       - name: dt_emissao
         tests: [not_null]
 
+  - name: stg_devolucoes
+    description: >
+      Itens de nota fiscal de entrada por devolucao de venda (SD1010),
+      conformados. Motivo e destino resolvidos contra os seeds
+      motivo_dev e destino (sigla sem match fica visivel como NULL).
+    columns:
+      - name: filial
+        tests: [not_null]
+      - name: nf
+        tests: [not_null]
+      - name: cod_produto
+        tests: [not_null]
+      - name: dt_emissao
+        tests: [not_null]
+
   - name: stg_faturamento_datavale
     description: >
       Historico de faturamento do DATAVALE (ERP anterior ao Protheus,
