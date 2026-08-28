@@ -239,6 +239,59 @@ fato agora significaria pular a sequência "um domínio de cada vez" do
 roadmap. Decisão: comissão migra junto com o domínio Financeiro
 (Fase 4), não faz parte do fechamento da Fase 2.
 
+## Reconciliação por mês e filial (28/08/2026)
+
+Reconciliação linha a linha bate no agregado total, mas soma agregada
+pode esconder erros que se cancelam (uma linha a mais aqui, uma a menos
+ali, no fim dá no mesmo total). Repeti a comparação agrupando por
+`(filial, mês)` contra cada `dw.fato_*` — e isso **revelou dois defeitos
+reais no próprio piloto anterior**, não vistos na comparação agregada
+porque o efeito líquido era pequeno.
+
+**Remessa industrialização e Coopeval: zero divergência também no nível
+mensal** — confirma que o match exato ao centavo não é coincidência de
+soma.
+
+**Devoluções — duplicata no próprio legado.** Filial 01004, fevereiro/2025:
+148 (novo) vs 149 (legado) linhas. Isolado: `dw.fato_devolucoes` tem
+**duas linhas idênticas** para `NF 000013758` (mesma chave: filial, nota,
+série, item, cliente), somando R$31.782,40 — o dobro do valor real.
+Conferido em `bronze.sd1010`: existe **uma única linha física** para essa
+nota (RECNO 2902, R$15.891,20). O `fato_devolucoes` novo está correto; o
+defeito é do piloto anterior, provavelmente de uma carga não-idempotente
+rodada duas vezes em algum momento do histórico da tabela `dw`.
+
+**Refaturamento — fan-out histórico no join com SC5010.** Vários meses
+(mai/jun/ago-2025, abr-jun/2026, filiais 01004 e 01011) têm o **mesmo
+número de linhas** nos dois lados, mas valores diferentes — em todos os
+casos verificados, `valor_legado = 3 × valor_novo`, exatamente. Rastreado
+até a origem: o pedido 004407 (filial 01004) tem hoje **uma única linha**
+em `bronze.sc5010`, mas o valor gravado em `dw.fato_refaturamento` está
+triplicado. Isso só acontece se, no momento em que o piloto anterior
+rodou, o `SC5010` tivesse **três linhas duplicadas** para aquele pedido —
+o JOIN do legado com SC5010 não é deduplicado, então um fan-out
+multiplica o `SUM(D2_TOTAL)` pelo número de linhas casadas. O modelo novo
+depara isso porque `stg_refaturamento` deduplica o SC5010 por
+`(filial, num_pedido)` **antes** do join — exatamente a mesma proteção
+usada nos demais fatos depois do achado da série duplicada no
+faturamento (T4/Fase 2). Se o Protheus tivesse hoje as mesmas triplicatas
+de então, o pipeline novo já estaria imune; o piloto anterior não tinha
+essa proteção.
+
+**Acordo comercial — mesma classe de problema, em escala pequena.** Três
+meses (fev/ago/out de 2025) com 1-2 linhas de diferença e centavos de
+valor — consistente com o mesmo padrão de pequenas duplicatas
+acumuladas no `dw` ao longo do tempo, não investigado linha a linha por
+ser imaterial (diferenças de R$24 a R$77 por mês).
+
+**Conclusão da reconciliação por mês/filial:** o que a comparação
+agregada não revelava é que **parte da divergência residual dos fatos
+"quase perfeitos" (refaturamento, acordo comercial) não é do pipeline
+novo — é o piloto anterior tendo acumulado pequenas inconsistências de
+carga ao longo da sua vida útil**. O pipeline novo, com dedup explícito
+em cada join contra tabelas de cabeçalho/pedido, é estruturalmente mais
+protegido contra esse tipo de erro do que o piloto que ele substitui.
+
 ## O que ainda não foi feito
 
 - Reconciliação por outros cortes (mês a mês, por filial) para garantir
@@ -250,8 +303,11 @@ roadmap. Decisão: comissão migra junto com o domínio Financeiro
   legada equivalente para o histórico DATAVALE; a validação daquele fato
   foi feita por taxa de casamento do de-para (99,3%), documentada em
   `stg_faturamento_datavale.sql`.
-- As ~21 linhas divergentes do refaturamento não foram explicadas linha
-  a linha (só por padrão) — revisitar se o volume crescer.
+- A divergência do refaturamento tem causa raiz confirmada (fan-out
+  histórico do SC5010 no piloto anterior, ver seção de reconciliação
+  por mês/filial) mas não foi corrigida linha a linha nos números
+  publicados no `dw` — não é algo a corrigir no pipeline novo, que já
+  não reproduz o problema.
 - As 25 linhas de pedidos com vendedor sem zero à esquerda (`"046"`,
   `"047"`) não foram corrigidas — mesma classe de problema de outros
   lugares, aqui de baixo impacto.
