@@ -69,6 +69,45 @@ models:
       - name: dt_emissao
         tests: [not_null]
 
+  - name: stg_refaturamento
+    description: >
+      Refaturamento (reemissao de NF), agregado por filial/produto/NF/
+      serie/data. So notas com pedido marcado como refaturamento
+      (SC5010.C5_X_REFAT preenchido).
+    columns:
+      - name: filial
+        tests: [not_null]
+      - name: cod_produto
+        tests: [not_null]
+      - name: nfe
+        tests: [not_null]
+
+  - name: stg_remessa_industrializacao
+    description: >
+      Remessa para industrializacao (CFOP 5901/5903/6901/6903),
+      conformada. Vendedor vem do cabecalho da nota (SF2.F2_VEND1), nao
+      do cadastro do cliente. Ver nota no topo do modelo sobre a
+      duplicacao com "remessa triangular" no legado.
+    columns:
+      - name: filial
+        tests: [not_null]
+      - name: nfe
+        tests: [not_null]
+      - name: cod_produto
+        tests: [not_null]
+
+  - name: stg_coopeval_remessa
+    description: >
+      Remessas do cliente Coopeval (07390806). Sem filtro de CFOP no
+      legado, so o cliente.
+    columns:
+      - name: filial
+        tests: [not_null]
+      - name: nfe
+        tests: [not_null]
+      - name: cod_produto
+        tests: [not_null]
+
   - name: stg_faturamento_datavale
     description: >
       Historico de faturamento do DATAVALE (ERP anterior ao Protheus,

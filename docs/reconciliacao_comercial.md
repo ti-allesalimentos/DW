@@ -142,6 +142,51 @@ Restam 4 linhas divergentes, todas explicadas:
 **Divergência final: zero — as 4 linhas restantes têm causa raiz
 identificada (timing de captura, não erro de dado).**
 
+## Refaturamento, remessa para industrialização e remessas Coopeval (28/08/2026)
+
+Três fatos adicionais, todos originados de SD2010 com recortes diferentes:
+
+**Remessa para industrialização** (CFOP 5901/5903/6901/6903): a aba
+`fRemTriangular` da planilha legada tinha a **query idêntica** à de
+`fRemIndustrializacao` — mesmos CFOPs, mesmos filtros, sem nada que as
+diferencie (comentário do próprio `legado/ingestion/queries/
+rem_triangular.sql` já apontava isso). O piloto anterior resolveu essa
+ambiguidade populando só o tipo `INDUSTRIALIZACAO` em `dw.fato_remessa`;
+mantive a mesma solução aqui — não faz sentido duplicar um modelo cuja
+query de origem é byte-a-byte igual. Fica para quando alguém do negócio
+confirmar se as duas deveriam ser distintas.
+
+Reconciliado contra `dw.fato_remessa` (tipo `INDUSTRIALIZACAO`): **1.048
+= 1.048 linhas, R$ 52.348.573,02 = R$ 52.348.573,02 — idêntico.**
+
+**Remessas Coopeval** (cliente 07390806 apenas, sem filtro de CFOP): a
+query legada tinha um corte `D2_EMISSAO > '20250430'` — não é regra de
+negócio, é o mesmo tipo de recorte arbitrário de planilha já removido no
+T5 (Fase 1). Não reproduzi esse corte de propósito. Comparando com o
+mesmo corte que a planilha tinha: **518 = 518 linhas, R$ 23.890.284,61 =
+R$ 23.890.284,61 — idêntico.** Sem o corte, o fato novo cobre ~2 meses a
+mais de histórico (fev–abr/2025) que a planilha nunca teve.
+
+**Refaturamento** (agregado por filial/produto/NF/série/data, só notas
+com `SC5010.C5_X_REFAT` preenchido): divergência de ~2,5% (939 vs 924
+linhas, R$8.765.941,14 vs R$8.547.542,79), com duas causas identificadas:
+- A query legada de refaturamento tem sua **própria lista de conversão
+  -CX, incompleta** — falta `PA01010011-CX`, que o `map_produto_cx`
+  unificado já cobre (é exatamente a dívida do capítulo 6 da
+  arquitetura: "a lista de fatores está repetida dentro de cada query,
+  divergindo entre si"). Uma linha aparece com o código cru `-CX` no
+  legado e convertido no novo — mesmo valor, classificação diferente.
+- A maioria das linhas extras (18 de 21) tem datas espalhadas de
+  janeiro a julho de 2026, não concentradas na borda do corte —
+  indício de que `C5_X_REFAT` foi marcado **depois** que o snapshot
+  legado foi capturado (o pedido só é sinalizado como refaturamento em
+  algum momento posterior à emissão da nota).
+
+Não persegui essas ~21 linhas uma a uma — a causa está identificada em
+nível de padrão, mas não confirmada linha a linha como nos fatos
+anteriores. Fica registrado como pendência menor, não como divergência
+sem explicação.
+
 ## O que ainda não foi feito
 
 - Reconciliação por outros cortes (mês a mês, por filial) para garantir
@@ -153,7 +198,8 @@ identificada (timing de captura, não erro de dado).**
   legada equivalente para o histórico DATAVALE; a validação daquele fato
   foi feita por taxa de casamento do de-para (99,3%), documentada em
   `stg_faturamento_datavale.sql`.
-- Os outros 5 fatos comerciais (refaturamento, remessas, acordo
-  comercial, pedidos, comissão) ainda não foram migrados — cada um
-  precisa da mesma reconciliação linha a linha antes de fechar a
-  Fase 2.
+- As ~21 linhas divergentes do refaturamento não foram explicadas linha
+  a linha (só por padrão) — revisitar se o volume crescer.
+- Os outros 2 fatos comerciais (acordo comercial, pedidos/comissão)
+  ainda não foram migrados — cada um precisa da mesma reconciliação
+  linha a linha antes de fechar a Fase 2.

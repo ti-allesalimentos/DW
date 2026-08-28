@@ -71,6 +71,15 @@ seeds:
       - name: cfop
         tests: [unique, not_null]
 
+  - name: cfops_remessa_industrializacao
+    description: CFOPs de remessa/retorno para industrializacao por encomenda.
+    config:
+      column_types:
+        cfop: varchar
+    columns:
+      - name: cfop
+        tests: [unique, not_null]
+
   - name: cfops_bonificacao
     description: CFOPs que caracterizam bonificacao (brinde) ou amostra gratis.
     config:

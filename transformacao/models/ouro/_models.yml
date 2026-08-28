@@ -144,6 +144,78 @@ models:
                 to: ref('dim_produto')
                 field: sk_produto
 
+  - name: fato_refaturamento
+    description: >
+      Fato refaturamento — Protheus (SD2010, agregado). Sem cliente
+      (grao do legado nao rastreia isso).
+    columns:
+      - name: recno_origem
+        tests: [unique, not_null]
+      - name: sk_produto
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_produto')
+                field: sk_produto
+
+  - name: fato_remessa_industrializacao
+    description: >
+      Fato remessa para industrializacao — Protheus (SD2010, CFOP 5901/
+      5903/6901/6903).
+    columns:
+      - name: recno_origem
+        tests: [unique, not_null]
+      - name: sk_cliente
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_cliente')
+                field: sk_cliente
+      - name: sk_produto
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_produto')
+                field: sk_produto
+      - name: sk_vendedor
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_vendedor')
+                field: sk_vendedor
+
+  - name: fato_coopeval_remessa
+    description: >
+      Fato remessas Coopeval — Protheus (SD2010, cliente 07390806).
+    columns:
+      - name: recno_origem
+        tests: [unique, not_null]
+      - name: sk_cliente
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_cliente')
+                field: sk_cliente
+      - name: sk_produto
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_produto')
+                field: sk_produto
+      - name: sk_vendedor
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_vendedor')
+                field: sk_vendedor
+
   - name: fato_faturamento_datavale
     description: >
       Fato faturamento — historico DATAVALE (02/2024 a 01/2025). Grao:
