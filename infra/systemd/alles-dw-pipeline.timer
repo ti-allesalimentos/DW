@@ -1,0 +1,16 @@
+[Unit]
+Description=Roda o ciclo do DW Alles a cada 2 horas
+
+[Timer]
+# 15 min apos o boot (da tempo do docker/Postgres subir) e depois a
+# cada 2h, ininterrupto -- "varias vezes ao dia" da meta da Fase 3 sem
+# precisar reproduzir os horarios comerciais reais.
+OnBootSec=15min
+OnUnitActiveSec=2h
+# Se a maquina estiver desligada na hora, roda assim que voltar --
+# nao deixa passar um dia inteiro sem atualizar so por causa de reboot.
+Persistent=true
+Unit=alles-dw-pipeline.service
+
+[Install]
+WantedBy=timers.target

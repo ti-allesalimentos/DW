@@ -30,7 +30,10 @@ transformacao/   projeto dbt (bronze -> prata -> ouro)
   models/          bronze (sources), prata (stg_*), ouro (dim_/fato_/mart_)
   seeds/           regras de negócio versionadas em CSV
   macros/          conformação do Protheus (TRIM, datas)
-infra/           docker-compose e DDL das camadas
+infra/           docker-compose, DDL das camadas e orquestração
+  sql/             criacao dos schemas e do controle de cargas
+  scripts/         rodar_pipeline.sh (extracao + dbt) e alertar_falha.sh
+  systemd/         service/timer que rodam o pipeline sozinho na VM
 docs/            arquitetura, inventários e plano de execução
 legado/          código anterior, preservado como referência
 ```

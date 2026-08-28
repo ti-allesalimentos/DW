@@ -1,0 +1,11 @@
+# Copiar para /etc/logrotate.d/alles-dw na VM de producao.
+# journald ja rotaciona sozinho (journalctl -u alles-dw-pipeline); isso
+# e so pro arquivo de conveniencia em logs/pipeline.log.
+/opt/alles-dataplatform/logs/pipeline.log {
+    daily
+    rotate 14
+    compress
+    missingok
+    notifempty
+    copytruncate
+}

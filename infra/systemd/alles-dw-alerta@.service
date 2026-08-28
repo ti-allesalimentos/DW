@@ -1,0 +1,9 @@
+[Unit]
+Description=Alerta de falha do %i
+
+[Service]
+Type=oneshot
+User=alles-dw
+Group=alles-dw
+WorkingDirectory=/opt/alles-dataplatform
+ExecStart=/opt/alles-dataplatform/infra/scripts/alertar_falha.sh %i

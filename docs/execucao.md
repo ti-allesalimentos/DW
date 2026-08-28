@@ -174,7 +174,79 @@ traz linhas que o `raw` filtrava por regra de negócio. A diferença deve ser
 **exatamente** as linhas excluídas por CFOP, filial, cliente ou nota — nada
 além. Se for além, investigue antes de seguir.
 
-## 6. O que nunca fazer
+## 6. Orquestração intradiária (Fase 3)
+
+O ciclo completo (extração incremental + `dbt build`) roda sozinho via
+`systemd`, na VM de produção — sem cron, sem Dagster (decisão da
+arquitetura: `cron/systemd` até a complexidade justificar algo maior).
+
+**Peças:**
+
+- `infra/scripts/rodar_pipeline.sh` — roda a extração, só segue pro dbt
+  se ela terminar sem erro (não faz sentido transformar um bronze pela
+  metade), loga tudo em `logs/pipeline.log` além do stdout.
+- `infra/scripts/alertar_falha.sh` — chamado automaticamente pelo
+  systemd (`OnFailure=`) quando o ciclo falha. Hoje só grava um alerta
+  visível no log e no `journalctl -p err`; é só um script, plugar um
+  canal real (e-mail, Slack) aqui quando existir, sem tocar no resto.
+- `infra/systemd/alles-dw-pipeline.service` — a unit que chama o script.
+- `infra/systemd/alles-dw-alerta@.service` — a unit de alerta (template,
+  recebe o nome de quem falhou).
+- `infra/systemd/alles-dw-pipeline.timer` — dispara 15 min depois do
+  boot e depois a cada 2h, contínuo. `Persistent=true`: se a VM estava
+  desligada na hora, roda assim que voltar.
+- `infra/systemd/alles-dw.logrotate` — rotação do log de conveniência
+  (o `journald` já rotaciona sozinho; isso é só pro arquivo texto).
+
+**Instalação na VM de produção** (ajuste `WorkingDirectory=` e o usuário
+`alles-dw` nas units se o caminho/usuário real for outro):
+
+```bash
+sudo cp infra/systemd/alles-dw-pipeline.service infra/systemd/alles-dw-alerta@.service \
+        infra/systemd/alles-dw-pipeline.timer /etc/systemd/system/
+sudo cp infra/systemd/alles-dw.logrotate /etc/logrotate.d/alles-dw
+sudo chmod +x infra/scripts/rodar_pipeline.sh infra/scripts/alertar_falha.sh
+sudo systemctl daemon-reload
+sudo systemctl enable --now alles-dw-pipeline.timer
+```
+
+**Operação:**
+
+```bash
+# proximo disparo e historico de execucoes
+systemctl list-timers alles-dw-pipeline.timer
+systemctl status alles-dw-pipeline.service
+
+# log de uma execucao especifica
+journalctl -u alles-dw-pipeline.service -n 100 --no-pager
+
+# rodar um ciclo na mao, fora do horario do timer (bom pra testar
+# instalacao nova ou depois de mexer no codigo)
+sudo systemctl start alles-dw-pipeline.service
+```
+
+**Teste manual sem systemd** (funciona em qualquer máquina com o
+ambiente já configurado, inclusive Windows/Git Bash — foi assim que o
+script foi validado antes de ir pra produção):
+
+```bash
+bash infra/scripts/rodar_pipeline.sh
+```
+
+**Meta de fechamento da fase:** sete dias seguidos de execução
+automática sem intervenção manual. Isso só se confirma observando a VM
+de produção depois do deploy — acompanhe `systemctl list-timers` e
+`ouro.controle_cargas` (nenhuma linha com `status='erro'` não tratada)
+por uma semana antes de considerar a Fase 3 fechada.
+
+**Atenção ao volume:** o ciclo completo levou ~21 minutos numa carga de
+teste (a maior parte é `SC9010`, 160 mil linhas recarregadas por inteiro
+a cada ciclo — não tem watermark confiável, mesma situação do `SC6010`).
+Isso ainda cabe folgado no intervalo de 2h do timer, mas acompanhe: se o
+volume dessas fontes crescer muito, o ciclo pode passar a demorar mais
+que o intervalo entre execuções.
+
+## 7. O que nunca fazer
 
 - Colocar filtro de negócio na extração. Bronze é pouso fiel; regra é da prata.
 - Rodar a carga inicial em horário comercial.

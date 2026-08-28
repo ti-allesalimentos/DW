@@ -1,0 +1,19 @@
+[Unit]
+Description=Alles DW — ciclo de extracao incremental + dbt build
+# Nao roda se o Postgres do docker compose ainda nao subiu no boot.
+After=docker.service network-online.target
+Wants=network-online.target
+OnFailure=alles-dw-alerta@%n.service
+
+[Service]
+Type=oneshot
+User=alles-dw
+Group=alles-dw
+WorkingDirectory=/opt/alles-dataplatform
+ExecStart=/opt/alles-dataplatform/infra/scripts/rodar_pipeline.sh
+# 45 min: generoso pro dbt build e pra extracao de fontes maiores nao
+# serem mortas no meio (o MERGE e transacional, mas nao ha por que abortar).
+TimeoutStartSec=2700
+
+[Install]
+WantedBy=multi-user.target
