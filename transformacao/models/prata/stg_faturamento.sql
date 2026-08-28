@@ -17,6 +17,18 @@
   da diretoria) e `<> '*'` (piloto anterior). O bronze traz a coluna crua; aqui
   a decisao acontece em UM lugar. Adotado `<> '*'`, que e a semantica do
   Protheus (marca de exclusao), e cobre tanto vazio quanto espaco.
+
+  Duas decisoes encontradas na reconciliacao contra o `dw.fato_faturamento`
+  do piloto anterior (28/08/2026):
+
+  1. `d2_serie` tem duas linhas fisicas identicas no Protheus para a mesma
+     nota/item, diferindo so no padding ('1' e '01' — RECNOs 2218 e 2998
+     do filial 01004/doc 000013482). Normaliza-se removendo zero a esquerda
+     e deduplica-se pela chave completa, senao a mesma venda conta em dobro.
+  2. Nota tipo "B" no cabecalho (SF2010.F2_TIPO) e bonificacao, nao venda —
+     a query legada ja excluia isso (`F2_TIPO <> 'B'`), inclusive quando o
+     item nao tem cabecalho correspondente no SF2010 (join sem match).
+     Bonificacao tem fato proprio (fato_bonificacao, ainda por construir).
 */
 
 with itens as (
@@ -24,7 +36,9 @@ with itens as (
     select
         {{ trim_protheus('d2_filial') }}   as filial,
         {{ trim_protheus('d2_doc') }}      as nfe,
-        {{ trim_protheus('d2_serie') }}    as serie,
+        -- zero a esquerda inconsistente na origem (ver nota acima) — '01' e '1'
+        -- sao a mesma serie.
+        coalesce(nullif(ltrim({{ trim_protheus('d2_serie') }}, '0'), ''), '0') as serie,
         {{ trim_protheus('d2_item') }}     as item_nf,
         {{ trim_protheus('d2_cod') }}      as cod_protheus,
         {{ trim_protheus('d2_cliente') }}  as cod_cliente,
@@ -47,6 +61,42 @@ with itens as (
 
 ),
 
+itens_dedup as (
+
+    select *
+    from (
+        select
+            i.*,
+            row_number() over (
+                partition by filial, nfe, serie, item_nf
+                order by recno_origem
+            ) as linha
+        from itens i
+    ) x
+    where linha = 1
+
+),
+
+sf2010_dedup as (
+
+    -- Cabecalho da nota: usado so pra identificar o tipo (bonificacao
+    -- exclui, ver nota no topo). Nao traz mais nada pra ca -- o resto do
+    -- cabecalho e escopo de outros fatos.
+    select distinct on (filial, nfe)
+        filial, nfe, tipo_nf
+    from (
+        select
+            {{ trim_protheus('f2_filial') }} as filial,
+            {{ trim_protheus('f2_doc') }}    as nfe,
+            {{ trim_protheus('f2_tipo') }}   as tipo_nf,
+            _carregado_em
+        from {{ source('bronze', 'sf2010') }}
+        where d_e_l_e_t_ <> '*'
+    ) f2
+    order by filial, nfe, _carregado_em desc
+
+),
+
 com_conversao as (
 
     -- A conversao caixa -> quilo acontece UMA vez, aqui, pelo de-para.
@@ -56,7 +106,7 @@ com_conversao as (
         coalesce(m.produto_base, i.cod_protheus)      as cod_produto,
         coalesce(m.fator, 1)                          as fator_conversao,
         m.produto_base is not null                    as convertido
-    from itens i
+    from itens_dedup i
     left join {{ ref('map_produto_cx') }} m
            on m.produto_cx = i.cod_protheus
 
@@ -112,9 +162,13 @@ from com_conversao c
 left join sa1010_dedup sa1
     on sa1.cod_cliente = c.cod_cliente
    and sa1.loja_cliente = c.loja_cliente
+join sf2010_dedup sf2
+    on sf2.filial = c.filial
+   and sf2.nfe = c.nfe
 where c.cfop in (select cfop from {{ ref('cfops_venda') }})
   and c.filial in (select filial from {{ ref('filiais_ativas') }})
   and c.cod_cliente not in (select cod_cliente from {{ ref('excecoes_cliente') }})
+  and sf2.tipo_nf <> 'B'
   and not exists (
         select 1
         from {{ ref('excecoes_nf') }} e
