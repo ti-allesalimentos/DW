@@ -206,6 +206,39 @@ linhas, imaterial.
 
 **Divergência final: explicada — nenhuma causa raiz pendente.**
 
+## Pedidos (28/08/2026)
+
+Oitavo fato, o mais complexo: pedidos de venda liberados/embarcados
+(SC9010), agregado por pedido/cliente/produto/item/sequência, juntando
+SC9010+SB1010+SC6010+SC5010+SF2010+DAK010. **Fonte nova** — não existia
+no piloto anterior (`dw` não tem `fato_pedidos`), então não há alvo de
+reconciliação linha a linha. Três tabelas do Protheus nunca extraídas
+antes entraram no bronze pela primeira vez: `SC9010` (160.209 linhas),
+`SF4010` (1.585) e `DAK010` (7.850).
+
+Diferença deliberada do legado: os joins com SE4010 (condição de
+pagamento) e SF4010 (descrição do TES) viraram `LEFT` — eram `INNER` no
+Power Query original, o que descartaria pedidos sem essas descrições
+cadastradas.
+
+Checagem de sanidade (sem alvo pra bater 1:1): 54.867 linhas, R$
+699.051.316,28. Saúde referencial: **0 produtos órfãos**; **226/54.867
+(0,4%) clientes não identificados**; **6.465/54.867 (11,8%) vendedores
+não identificados** — investigado: 6.440 dessas linhas têm o campo
+`C5_VEND1` **em branco no próprio Protheus** (pedido sem vendedor
+atribuído, dado real). As 25 restantes (`"046"`, `"047"`) são um zero à
+esquerda faltando que a comparação de string exata contra `dim_vendedor`
+não resolve — mesma classe de problema do zero à esquerda já visto em
+outros lugares, aqui não corrigido (afeta 0,05% do fato).
+
+## Comissão — adiada para a Fase 4 (Financeiro)
+
+`fComissao` depende de `SE5010` e `SE1010` — tabelas do domínio
+**Financeiro** (cap. 10 da arquitetura), não Comercial. Construir esse
+fato agora significaria pular a sequência "um domínio de cada vez" do
+roadmap. Decisão: comissão migra junto com o domínio Financeiro
+(Fase 4), não faz parte do fechamento da Fase 2.
+
 ## O que ainda não foi feito
 
 - Reconciliação por outros cortes (mês a mês, por filial) para garantir
@@ -219,6 +252,14 @@ linhas, imaterial.
   `stg_faturamento_datavale.sql`.
 - As ~21 linhas divergentes do refaturamento não foram explicadas linha
   a linha (só por padrão) — revisitar se o volume crescer.
-- Os outros 2 fatos comerciais (acordo comercial, pedidos/comissão)
-  ainda não foram migrados — cada um precisa da mesma reconciliação
-  linha a linha antes de fechar a Fase 2.
+- As 25 linhas de pedidos com vendedor sem zero à esquerda (`"046"`,
+  `"047"`) não foram corrigidas — mesma classe de problema de outros
+  lugares, aqui de baixo impacto.
+- **Comissão** foi deliberadamente adiada para a Fase 4 (Financeiro) —
+  ver seção acima.
+- Todos os 7 fatos comerciais migrados nesta fase (faturamento,
+  bonificação, devoluções, refaturamento, remessa industrialização,
+  Coopeval, acordo comercial, pedidos — 8 no total) têm reconciliação
+  registrada. Falta uma passada final comparando por corte mensal/filial
+  em vez de só linha a linha, para garantir que o zero de divergência
+  não é coincidência de soma agregada.

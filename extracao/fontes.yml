@@ -85,3 +85,21 @@ fontes:
     tabela: SE4010
     destino: bronze.se4010
     chave: R_E_C_N_O_
+
+  # ---------- Pedidos: liberacao/embarque ----------
+  - nome: SC9010          # liberacao de pedido de venda (embarque)
+    tabela: SC9010
+    destino: bronze.sc9010
+    chave: R_E_C_N_O_
+    # sem data propria confiavel pra watermark (mesma razao do SC6010):
+    # recarga full enquanto o volume (160k linhas) permitir.
+
+  - nome: SF4010          # tipos de operacao (TES)
+    tabela: SF4010
+    destino: bronze.sf4010
+    chave: R_E_C_N_O_
+
+  - nome: DAK010           # datas de embarque/carga
+    tabela: DAK010
+    destino: bronze.dak010
+    chave: R_E_C_N_O_

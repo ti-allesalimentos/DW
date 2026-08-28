@@ -51,3 +51,9 @@ sources:
         description: Cadastro de produtos.
       - name: se4010
         description: Condicoes de pagamento.
+      - name: sc9010
+        description: Liberacao/embarque de pedido de venda.
+      - name: sf4010
+        description: Tipos de operacao (TES).
+      - name: dak010
+        description: Datas de embarque/carga.

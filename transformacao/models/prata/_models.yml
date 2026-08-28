@@ -121,6 +121,21 @@ models:
       - name: dt_emissao
         tests: [not_null]
 
+  - name: stg_pedidos
+    description: >
+      Pedidos de venda liberados/embarcados (SC9010), agregado por
+      pedido/cliente/produto/item/sequencia. Sem equivalente
+      reconciliavel no piloto anterior (fonte nova, nao migrada antes).
+    columns:
+      - name: filial
+        tests: [not_null]
+      - name: pedido
+        tests: [not_null]
+      - name: cod_produto
+        tests: [not_null]
+      - name: chave_cliente
+        tests: [not_null]
+
   - name: stg_faturamento_datavale
     description: >
       Historico de faturamento do DATAVALE (ERP anterior ao Protheus,
