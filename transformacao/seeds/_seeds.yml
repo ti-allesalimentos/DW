@@ -56,6 +56,15 @@ seeds:
       - name: cfop
         tests: [unique, not_null]
 
+  - name: cfops_bonificacao
+    description: CFOPs que caracterizam bonificacao (brinde) ou amostra gratis.
+    config:
+      column_types:
+        cfop: varchar
+    columns:
+      - name: cfop
+        tests: [unique, not_null]
+
   - name: filiais_ativas
     description: Filiais consideradas na analise comercial.
     config:

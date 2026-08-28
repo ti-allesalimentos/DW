@@ -39,6 +39,21 @@ models:
             severity: warn
             error_if: ">1000"
 
+  - name: stg_bonificacao
+    description: >
+      Itens de nota fiscal de saida classificados como bonificacao/amostra
+      gratis (CFOP 5910/5911/6910/6911), conformados. Mesma origem e
+      mesmos joins do stg_faturamento.
+    columns:
+      - name: filial
+        tests: [not_null]
+      - name: nfe
+        tests: [not_null]
+      - name: cod_produto
+        tests: [not_null]
+      - name: dt_emissao
+        tests: [not_null]
+
   - name: stg_faturamento_datavale
     description: >
       Historico de faturamento do DATAVALE (ERP anterior ao Protheus,

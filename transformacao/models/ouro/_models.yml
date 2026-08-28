@@ -93,6 +93,35 @@ models:
       - name: total
         tests: [not_null]
 
+  - name: fato_bonificacao
+    description: >
+      Fato bonificacao — Protheus (SD2010, CFOP de bonificacao/amostra
+      gratis). Grao: item de nota fiscal.
+    columns:
+      - name: recno_origem
+        tests: [unique, not_null]
+      - name: sk_cliente
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_cliente')
+                field: sk_cliente
+      - name: sk_produto
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_produto')
+                field: sk_produto
+      - name: sk_vendedor
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_vendedor')
+                field: sk_vendedor
+
   - name: fato_faturamento_datavale
     description: >
       Fato faturamento — historico DATAVALE (02/2024 a 01/2025). Grao:

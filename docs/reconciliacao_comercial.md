@@ -67,6 +67,25 @@ do SQL de três valores). Bonificação passa a ter fato próprio
 (`fato_bonificacao`, ainda não construído) em vez de vazar para o
 faturamento.
 
+## Bonificação (28/08/2026)
+
+Mesma origem e mesmos joins do faturamento (SD2010+SF2010+SA1010), CFOP
+de bonificação/amostra grátis (5910/5911/6910/6911) em vez de CFOP de
+venda. Reaproveitou a mesma dedup de série e o mesmo filtro de tipo "B"
+descobertos na reconciliação do faturamento — sem eles a divergência
+inicial seria maior.
+
+Comparado `prata_ouro.fato_bonificacao` contra `dw.fato_bonificacao`,
+mesmo corte de data (`< 2026-07-13`):
+
+| Métrica | Legado (`dw`) | Novo (`prata_ouro`) |
+|---|---|---|
+| Linhas | 2.082 | 2.082 |
+| Valor total | R$ 7.896.896,71 | R$ 7.896.896,71 |
+| Linhas só num lado | 0 | 0 |
+
+**Divergência final: zero.**
+
 ## O que ainda não foi feito
 
 - Reconciliação por outros cortes (mês a mês, por filial) para garantir
@@ -78,7 +97,7 @@ faturamento.
   legada equivalente para o histórico DATAVALE; a validação daquele fato
   foi feita por taxa de casamento do de-para (99,3%), documentada em
   `stg_faturamento_datavale.sql`.
-- Os outros 7 fatos comerciais (devoluções, bonificação, refaturamento,
-  remessas, acordo comercial, pedidos, comissão) ainda não foram
-  migrados — cada um precisa da mesma reconciliação linha a linha antes
-  de fechar a Fase 2.
+- Os outros 6 fatos comerciais (devoluções, refaturamento, remessas,
+  acordo comercial, pedidos, comissão) ainda não foram migrados — cada
+  um precisa da mesma reconciliação linha a linha antes de fechar a
+  Fase 2.
