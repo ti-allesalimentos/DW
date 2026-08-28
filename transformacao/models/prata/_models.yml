@@ -108,6 +108,19 @@ models:
       - name: cod_produto
         tests: [not_null]
 
+  - name: stg_acordo_comercial
+    description: >
+      Acordo comercial (entrada de verba/bonificacao do fornecedor via
+      TES 050/052), conformado. Sem join com outras tabelas -- a query
+      legada usa so o SD1010.
+    columns:
+      - name: filial
+        tests: [not_null]
+      - name: cod_produto
+        tests: [not_null]
+      - name: dt_emissao
+        tests: [not_null]
+
   - name: stg_faturamento_datavale
     description: >
       Historico de faturamento do DATAVALE (ERP anterior ao Protheus,

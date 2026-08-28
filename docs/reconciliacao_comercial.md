@@ -187,6 +187,25 @@ nível de padrão, mas não confirmada linha a linha como nos fatos
 anteriores. Fica registrado como pendência menor, não como divergência
 sem explicação.
 
+## Acordo comercial (28/08/2026)
+
+Query mais simples dos fatos comerciais: só SD1010 (TES 050/052), sem
+nenhum join. Reconciliado contra `dw.fato_acordo_comercial`, mesmo corte
+de data: 6.287 (novo) vs 6.256 (legado), R$1.998.192,83 vs
+R$1.997.855,53.
+
+Restam 44 linhas só no novo (notas de 06/07/2026, mesmo padrão de
+timing de snapshot dos demais fatos) e 10 só no legado — estas últimas
+com datas de **2000, 2007 e 2024**, muito antes da entrada do Protheus
+(01/02/2025). O extrator nunca as buscou de propósito: o laço de carga
+inicial (`extracao/carga.py`) usa `INICIO_PROTHEUS` como piso para
+**todas** as fontes, não só o faturamento — mesma decisão já registrada
+na arquitetura (cap. 10) de que o que existe antes da entrada do ERP é
+resíduo de migração, não dado a tratar. Valor residual: ~R$1.300 em 10
+linhas, imaterial.
+
+**Divergência final: explicada — nenhuma causa raiz pendente.**
+
 ## O que ainda não foi feito
 
 - Reconciliação por outros cortes (mês a mês, por filial) para garantir
