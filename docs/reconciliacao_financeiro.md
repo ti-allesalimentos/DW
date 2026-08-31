@@ -120,3 +120,71 @@ criadas no Protheus depois da carga do bronze. A quarta é uma linha
 inteiramente em branco (todas as chaves vazias, valor zero) retornada
 pela query do SQL Server — não corresponde a um titulo real e não afeta
 nenhuma soma; não investigada a fundo por ter valor zero.
+
+## Fatos menores (movimento bancário, descontos, rateio, tarifas)
+
+Reconciliados ao vivo contra as seis queries legadas correspondentes
+(`sqlMovimentoBancario`, `sqlMovimentoBancarioNCC`,
+`sqlfTarifasBancarias`, `sqlfDescObtidos`, `sqlfDescConcedidos`,
+`sqlfMultiplasNaturezas`), todas em `fFinanceiro.m`.
+
+| Fato | Legado (ao vivo) | Novo (`prata_ouro`) |
+|---|---:|---:|
+| `fato_movimento_bancario_juros` | 1.376 | 1.376 |
+| `fato_movimento_bancario_ncc` | 6.087 | 6.087 |
+| `fato_descontos_obtidos` | 383 | 383 |
+| `fato_descontos_concedidos` | 13.749 | 13.749 |
+| `fato_rateio_natureza` | 1.724 | 1.724 |
+| `fato_tarifas_bancarias` | 4.784 (R$ 3.327.403,72) | 4.781 (R$ 3.327.388,47) |
+
+Cinco dos seis batem exatamente. `fato_tarifas_bancarias` tem diferença
+de 3 linhas / R$ 15,25 (~0,0005% do total) — consistente com o mesmo
+drift de produção das seções acima, mas não rastreada linha a linha
+porque a projeção legada (`sqlfTarifasBancarias`) não expõe nenhuma
+chave estável (nem RECNO, nem número de documento) — só filial, data,
+valor, histórico e natureza, que podem se repetir em transações
+diferentes no mesmo dia. Dado o tamanho da diferença e o padrão já
+confirmado nas outras seções, não foi investigada linha a linha.
+
+### Achado técnico: `trim_protheus` quebra comparação `<>` em campo majoritariamente em branco
+
+`stg_tarifas_bancarias` primeiro tentativa usava `trim_protheus()` (que
+converte `''` em `NULL`) nos filtros `E5_SITUACA <> 'C'` e
+`E5_TIPODOC <> 'ES'`. Como quase toda linha válida tem `E5_SITUACA`
+em branco, e `NULL <> 'C'` nunca é verdadeiro em SQL, isso excluía
+~90% das linhas por engano (a query legada compara o `CHAR` bruto, onde
+`' ' <> 'C'` é verdadeiro). Corrigido usando `btrim()` puro nesses dois
+filtros — a macro `trim_protheus` continua certa pra colunas que viram
+valor de saída (onde `''`→`NULL` é o comportamento desejado), só não
+serve pra filtro de desigualdade num campo que fica em branco na
+maioria das linhas.
+
+### Achado técnico: `LEN(CT1_CONTA) = 8` não bate com nenhuma conta
+
+A query "PLANO DE CONTAS" embutida em `sqlConsulta` (mesma string do
+saldo bancário — ver achado abaixo) tem um segundo defeito
+independente: o filtro `LEN(LTRIM(RTRIM(CT1_CONTA))) = 8` não
+corresponde a nenhum código de conta hoje. `CT1010` só tem contas de 1,
+2, 4, 7, 10, 11, 12, 13, 14 ou 17 dígitos (contagem direta no bronze) —
+nunca 8. `dim_conta_contabil` foi construída sem esse filtro.
+
+### Achado técnico: `sqlConsulta` tem duas queries coladas, só a primeira roda
+
+`sqlConsulta` (fFinanceiro.m) concatena o SQL do saldo bancário
+(`CQ0010`) com uma segunda consulta de plano de contas (`CT1010`) na
+mesma string, sem separador. Testado ao vivo: `Sql.Database` do Power
+Query (e `pd.read_sql` do Python) só devolvem o primeiro result set —
+a segunda consulta é código morto, nunca executada pelo workbook.
+`fato_saldo_conta_corrente` replica só a primeira (175 linhas, bate com
+a contagem do `bronze.cq0010`); `dim_conta_contabil` reconstrói a
+intenção da segunda a partir do zero, sem alvo de reconciliação.
+
+### Achado técnico: bug real em `VALOR_REALIZADO` do saldo bancário
+
+O `CASE` que deveria calcular o módulo do movimento diário
+(`CASE WHEN MOVIMENTO<0 THEN -MOVIMENTO ELSE -MOVIMENTO END`) tem as
+duas ramificações idênticas — sempre devolve `-MOVIMENTO`, nunca um
+valor absoluto. Replicado fielmente em `stg_saldo_conta_corrente`
+porque é o que o legado de fato calcula; o saldo acumulado
+(`valor_saldo_atual`) continua correto porque as duas inversões se
+cancelam na fórmula final (`saldo_atual - movimento`).

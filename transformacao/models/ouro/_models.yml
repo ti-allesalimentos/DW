@@ -328,6 +328,103 @@ models:
       - name: valor
         tests: [not_null]
 
+  - name: dim_banco
+    description: Banco/conta corrente cadastrada (SA6010).
+    columns:
+      - name: sk_banco
+        tests: [unique, not_null]
+      - name: cod_banco
+        tests: [unique, not_null]
+
+  - name: dim_motivo_baixa
+    description: Motivo de baixa de titulo (F7G010).
+    columns:
+      - name: sk_motivo_baixa
+        tests: [unique, not_null]
+      - name: sigla
+        tests: [unique, not_null]
+
+  - name: dim_forma_pagamento
+    description: Forma de pagamento (SX5010, tabela '58').
+    columns:
+      - name: sk_forma_pagamento
+        tests: [unique, not_null]
+      - name: cod_forma_pagamento
+        tests: [unique, not_null]
+
+  - name: dim_conta_contabil
+    description: >
+      Plano de contas analitico (CT1010, so codigos com 8 digitos).
+      Reconstroi a intencao de uma query legada que era codigo morto
+      (ver nota no modelo).
+    columns:
+      - name: sk_conta_contabil
+        tests: [unique, not_null]
+      - name: codigo_conta
+        tests: [unique, not_null]
+
+  - name: fato_saldo_conta_corrente
+    description: >
+      Fato saldo diario de conta corrente — Protheus (CQ0010).
+      Grao: filial + conta + data.
+    columns:
+      - name: filial
+        tests: [not_null]
+      - name: codigo_conta
+        tests: [not_null]
+      - name: data
+        tests: [not_null]
+      - name: valor_saldo_atual
+        tests: [not_null]
+
+  - name: fato_movimento_bancario_juros
+    description: >
+      Fato movimento bancario de juros/antecipacao — Protheus (SE5010,
+      motivo 'DEB').
+    columns:
+      - name: recno_origem
+        tests: [unique, not_null]
+
+  - name: fato_movimento_bancario_ncc
+    description: >
+      Fato movimento bancario de NCC — Protheus (SE5010, tipo 'NCC').
+    columns:
+      - name: recno_origem
+        tests: [unique, not_null]
+
+  - name: fato_tarifas_bancarias
+    description: >
+      Fato tarifas bancarias — Protheus (SE5010, naturezas de
+      tarifa/IOF).
+    columns:
+      - name: recno_origem
+        tests: [unique, not_null]
+
+  - name: fato_descontos_obtidos
+    description: >
+      Fato descontos obtidos de fornecedores — Protheus (SE2010).
+    columns:
+      - name: recno_origem
+        tests: [unique, not_null]
+      - name: valor
+        tests: [not_null]
+
+  - name: fato_descontos_concedidos
+    description: >
+      Fato descontos concedidos a clientes — Protheus (SE1010).
+    columns:
+      - name: recno_origem
+        tests: [unique, not_null]
+      - name: valor
+        tests: [not_null]
+
+  - name: fato_rateio_natureza
+    description: >
+      Fato rateio de titulo por multiplas naturezas — Protheus (SEV010).
+    columns:
+      - name: recno_origem
+        tests: [unique, not_null]
+
   - name: fato_comissao
     description: >
       Fato comissao — Protheus (SE5010, baixa de titulo). Grao: evento

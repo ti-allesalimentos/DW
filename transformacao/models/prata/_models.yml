@@ -202,3 +202,67 @@ models:
         tests: [not_null]
       - name: chave_fornecedor
         tests: [not_null]
+
+  - name: stg_saldo_conta_corrente
+    description: >
+      Saldo diario de conta corrente (CQ0010), grao filial+conta+data.
+      Replica sqlConsulta via window function em vez do self-join
+      original — ver nota no modelo sobre o bug de VALOR_REALIZADO.
+    columns:
+      - name: filial
+        tests: [not_null]
+      - name: codigo_conta
+        tests: [not_null]
+      - name: data
+        tests: [not_null]
+
+  - name: stg_movimento_bancario_juros
+    description: >
+      Movimento bancario de juros/antecipacao (SE5010, motivo 'DEB').
+      Grao recno_origem.
+    columns:
+      - name: recno_origem
+        tests: [unique, not_null]
+
+  - name: stg_movimento_bancario_ncc
+    description: >
+      Movimento bancario de NCC (SE5010, tipo 'NCC'). Grao recno_origem.
+    columns:
+      - name: recno_origem
+        tests: [unique, not_null]
+
+  - name: stg_tarifas_bancarias
+    description: >
+      Tarifas bancarias (SE5010, naturezas de tarifa/IOF). Grao
+      recno_origem.
+    columns:
+      - name: recno_origem
+        tests: [unique, not_null]
+
+  - name: stg_descontos_obtidos
+    description: >
+      Descontos obtidos de fornecedores (SE2010, E2_DESCONT <> 0).
+      Grao recno_origem.
+    columns:
+      - name: recno_origem
+        tests: [unique, not_null]
+      - name: chave_fornecedor
+        tests: [not_null]
+
+  - name: stg_descontos_concedidos
+    description: >
+      Descontos concedidos a clientes (SE1010, E1_DESCONT <> 0).
+      Grao recno_origem.
+    columns:
+      - name: recno_origem
+        tests: [unique, not_null]
+      - name: chave_cliente
+        tests: [not_null]
+
+  - name: stg_rateio_natureza
+    description: >
+      Rateio de titulo por multiplas naturezas financeiras (SEV010).
+      Grao recno_origem.
+    columns:
+      - name: recno_origem
+        tests: [unique, not_null]
