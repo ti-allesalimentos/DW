@@ -547,6 +547,13 @@ models:
       - name: sk_custo_comissao
         tests: [unique, not_null]
 
+  - name: fato_saldo_inicial_estoque
+    description: >
+      Fato saldo inicial de estoque — Protheus (SB9010).
+    columns:
+      - name: recno_origem
+        tests: [unique, not_null]
+
   - name: fato_comissao
     description: >
       Fato comissao — Protheus (SE5010, baixa de titulo). Grao: evento

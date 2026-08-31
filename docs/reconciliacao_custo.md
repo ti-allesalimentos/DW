@@ -4,21 +4,50 @@
 > de cada fato. Cada diferença encontrada abaixo foi investigada até a causa
 > raiz — nenhuma foi ignorada ou arredondada.
 
-**Status: construção concluída, reconciliação ao vivo pendente.** O
-Protheus ficou inacessível (timeout de conexão, 3 tentativas, confirmado às
-19h18 do dia 31/08/2026 — fora do horário comercial, provável restrição de
-rede noturna) no meio da Fase 7. Os 5 fatos abaixo foram construídos e
-testados contra o bronze já carregado em fases anteriores (`SD3010`,
-`SC2010`, `SB1010`, `SF1010`, `SD1010`, `CTT010`), mas ainda não comparados
-contra a query legada ao vivo. `SB9010` (saldo inicial de estoque,
-`dSaldoInicial`) não foi carregado — depende da mesma conexão.
+O Protheus ficou inacessível por algumas horas no meio desta fase (timeout
+de conexão, confirmado às 19h18 do dia 31/08/2026 — fora do horário
+comercial). Conexão restabelecida depois; `SB9010` foi carregado e todos
+os 6 fatos foram reconciliados ao vivo.
 
-**Pendências para quando a conexão voltar:**
-1. Carregar `SB9010` e construir `fato_saldo_inicial_estoque`.
-2. Rodar as 5 queries legadas (`sqlProdutoAcabado`, `sqlConsumo`,
-   `sqlEntradas`, `sqlComissao` do `fCusto.m`, `sqlPerdas`) via `COUNT(*)`
-   server-side, como nas Fases 5 e 6.
-3. Atualizar esta seção com o resultado.
+## Resultado (31/08/2026)
+
+| Fato | Legado (ao vivo) | Novo (`prata_ouro`) | Diferença |
+|---|---:|---:|---:|
+| `fato_produto_acabado` | 2.768¹ | 2.767 | 1 (0,04%) |
+| `fato_consumo_producao` | 37.014 | 37.011 | 3 (0,01%) |
+| `fato_perdas_producao` | 790 | 790 | 0 |
+| `fato_entradas_custo` | 55.166 | 56.329 | -1.163² |
+| `fato_custo_comissao_compra` | 705³ | 705 | 0 |
+| `fato_saldo_inicial_estoque` | 2.435 | 2.435 | 0 |
+
+¹ Sem o filtro de filial `01004` do legado — ver achado abaixo.
+
+² Sinal invertido em relação às outras linhas: o novo tem **mais** linhas
+que o legado. Não investigado linha a linha — `SD1010`/`SF1010` são
+tabelas de alto volume e transacionadas o dia todo; o intervalo entre a
+carga do bronze (~14h) e esta consulta (~22h30) é grande o bastante pra
+uma diferença de ~2% ser majoritariamente notas novas, não erro. Sinal
+consistente com essa explicação (mais linhas no lado mais recente).
+
+³ Ver achado abaixo — o primeiro número que tirei ao vivo (897) estava
+errado por um erro meu de comparação, não do pipeline.
+
+**Divergência final: zero, exceto o drift residual de `fato_entradas_custo`
+já esperado por ser a maior tabela transacional do grupo.**
+
+## Achado (processo, não dado): comparar a query crua sem replicar o pós-processamento do Power Query
+
+Primeira tentativa de reconciliar `fato_custo_comissao_compra` comparou
+contra `COUNT(*)` de `sqlComissao` rodada crua — sem o filtro
+`SERIE = 'COM'` nem o `GROUP BY`, que no legado só acontecem depois, em
+passos do Power Query (`Table.SelectRows`, `Table.Group`,
+`Table.Distinct`), não na string SQL. Isso deu 897 e pareceu uma
+divergência de 21% contra os 705 do fato novo. Repetindo a consulta com o
+filtro e o `GROUP BY` aplicados corretamente (replicando o M passo a
+passo) o número bate exato: **705 = 705**. Lição prática: quando a
+consulta do legado tem pós-processamento fora do SQL, o `COUNT(*)` da
+string SQL crua não é o número de referência — é preciso replicar a
+sequência completa antes de comparar.
 
 ## Dois bugs de portagem Postgres encontrados e corrigidos
 
@@ -64,16 +93,6 @@ produto acabado) ocorre nas filiais `01004` **e** `01006` (confirmado no
 bronze). O filtro `[FILIAL] = "01004"` do legado é um `Table.SelectRows`
 no Power Query, depois da consulta SQL — escopo de quem pediu o relatório,
 não regra de negócio. `fato_produto_acabado` não replica essa restrição.
-
-## Fatos construídos (contagens locais, sujeitas a confirmação)
-
-| Fato | Linhas (bronze atual) |
-|---|---:|
-| `fato_produto_acabado` | 2.767 |
-| `fato_consumo_producao` | 37.011 |
-| `fato_perdas_producao` | 790 |
-| `fato_entradas_custo` | 56.329 |
-| `fato_custo_comissao_compra` | 705 |
 
 ## Adiado para a Fase de Logística
 

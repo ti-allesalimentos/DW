@@ -399,3 +399,11 @@ models:
     columns:
       - name: filial
         tests: [not_null]
+
+  - name: stg_saldo_inicial_estoque
+    description: >
+      Saldo inicial de estoque por produto/local (SB9010). Grao
+      recno_origem.
+    columns:
+      - name: recno_origem
+        tests: [unique, not_null]

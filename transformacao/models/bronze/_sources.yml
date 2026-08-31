@@ -128,3 +128,8 @@ sources:
             tests: [unique, not_null]
       - name: sg2010
         description: "Cadastro de operacao (roteiro de producao)."
+      - name: sb9010
+        description: Saldo de estoque (posicao por produto/local/data).
+        columns:
+          - name: r_e_c_n_o_
+            tests: [unique, not_null]

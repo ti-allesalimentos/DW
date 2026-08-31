@@ -341,3 +341,12 @@ fontes:
     chave: R_E_C_N_O_
     # sem _STAMP_ nem data de negocio confiavel — carga full, tabela
     # pequena (147 linhas).
+
+  # ---------- Custo (Fase 7) ----------
+  - nome: SB9010           # saldo de estoque (posicao por produto/local/data)
+    tabela: SB9010
+    destino: bronze.sb9010
+    chave: R_E_C_N_O_
+    coluna_watermark: S_T_A_M_P_
+    tipo_watermark: timestamp
+    janela_movel_dias: 3
