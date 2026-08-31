@@ -133,3 +133,20 @@ sources:
         columns:
           - name: r_e_c_n_o_
             tests: [unique, not_null]
+      - name: sc7010
+        description: Pedido de compra.
+        columns:
+          - name: r_e_c_n_o_
+            tests: [unique, not_null]
+      - name: sc1010
+        description: Solicitacao de compra.
+        columns:
+          - name: r_e_c_n_o_
+            tests: [unique, not_null]
+      - name: sb2010
+        description: Saldo de estoque por local (grao mais fino que SB9010).
+        columns:
+          - name: r_e_c_n_o_
+            tests: [unique, not_null]
+      - name: sys_usr
+        description: Usuarios do Protheus (comprador/solicitante).

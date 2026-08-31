@@ -350,3 +350,34 @@ fontes:
     coluna_watermark: S_T_A_M_P_
     tipo_watermark: timestamp
     janela_movel_dias: 3
+
+  # ---------- Compras (Fase 8) ----------
+  - nome: SC7010           # pedido de compra
+    tabela: SC7010
+    destino: bronze.sc7010
+    chave: R_E_C_N_O_
+    coluna_watermark: S_T_A_M_P_
+    tipo_watermark: timestamp
+    janela_movel_dias: 3
+
+  - nome: SC1010           # solicitacao de compra
+    tabela: SC1010
+    destino: bronze.sc1010
+    chave: R_E_C_N_O_
+    coluna_watermark: S_T_A_M_P_
+    tipo_watermark: timestamp
+    janela_movel_dias: 3
+
+  - nome: SB2010           # saldo de estoque por local (grao mais fino que SB9010)
+    tabela: SB2010
+    destino: bronze.sb2010
+    chave: R_E_C_N_O_
+    coluna_watermark: S_T_A_M_P_
+    tipo_watermark: timestamp
+    janela_movel_dias: 3
+
+  - nome: SYS_USR          # usuarios do Protheus (comprador/solicitante)
+    tabela: SYS_USR
+    destino: bronze.sys_usr
+    chave: R_E_C_N_O_
+    # sem _STAMP_ — carga full, tabela pequena (253 linhas).

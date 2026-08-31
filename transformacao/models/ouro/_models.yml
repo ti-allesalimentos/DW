@@ -554,6 +554,45 @@ models:
       - name: recno_origem
         tests: [unique, not_null]
 
+  - name: dim_cond_pgto
+    description: Condicao de pagamento (SE4010).
+    columns:
+      - name: sk_cond_pgto
+        tests: [unique, not_null]
+      - name: cod_cond_pgto
+        tests: [unique, not_null]
+
+  - name: fato_saldo_fisico_compras
+    description: >
+      Fato saldo fisico de estoque pra compras — Protheus (SB2010).
+      Grao filial+produto.
+    columns:
+      - name: sk_saldo
+        tests: [unique, not_null]
+
+  - name: fato_pedido_compra
+    description: >
+      Fato pedido de compra — Protheus (SC7010), com status calculado.
+    columns:
+      - name: recno_origem
+        tests: [unique, not_null]
+
+  - name: fato_devolucao_compra
+    description: >
+      Fato devolucao em nota de entrada — Protheus (SF1010+SD1010,
+      tipo 'D').
+    columns:
+      - name: recno_origem
+        tests: [unique, not_null]
+
+  - name: fato_historico_preco_compra
+    description: >
+      Fato historico de preco de compra por produto — Protheus
+      (SC7010), com preco anterior/medio/desvio.
+    columns:
+      - name: recno_origem
+        tests: [unique, not_null]
+
   - name: fato_comissao
     description: >
       Fato comissao — Protheus (SE5010, baixa de titulo). Grao: evento

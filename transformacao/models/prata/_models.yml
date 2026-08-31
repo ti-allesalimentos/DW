@@ -407,3 +407,36 @@ models:
     columns:
       - name: recno_origem
         tests: [unique, not_null]
+
+  - name: stg_saldo_fisico_compras
+    description: >
+      Saldo fisico de estoque relevante pra compras (SB2010, locais
+      especificos), agregado. Grao filial+cod_produto.
+    columns:
+      - name: filial
+        tests: [not_null]
+
+  - name: stg_pedido_compra
+    description: >
+      Pedido de compra (SC7010) com status calculado (cascata de 9
+      regras). Grao recno_origem.
+    columns:
+      - name: recno_origem
+        tests: [unique, not_null]
+
+  - name: stg_devolucao_compra
+    description: >
+      Devolucao em nota de entrada (SF1010+SD1010, tipo 'D'). Grao
+      recno_origem. Consulta byte-identica em fCompras.m e
+      fFinanceiro.m — resolvida uma vez so.
+    columns:
+      - name: recno_origem
+        tests: [unique, not_null]
+
+  - name: stg_historico_preco_compra
+    description: >
+      Historico de preco de compra por produto (SC7010), com preco
+      anterior/medio/desvio via window functions. Grao recno_origem.
+    columns:
+      - name: recno_origem
+        tests: [unique, not_null]

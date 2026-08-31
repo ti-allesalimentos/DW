@@ -82,10 +82,18 @@ def montar_sql(fonte: dict, de: date | None, ate: date | None) -> str:
 def _normalizar(df: pd.DataFrame) -> pd.DataFrame:
     """Ajuste minimo e puramente tecnico: nomes de coluna em minusculo.
 
-    Nenhum valor e alterado — TRIM, cast e tratamento de sentinela sao
-    responsabilidade da prata.
+    Nenhum valor de negocio e alterado — TRIM, cast e tratamento de
+    sentinela sao responsabilidade da prata. A unica excecao e o byte
+    NUL (0x00): Postgres recusa qualquer texto que o contenha (nao e
+    regra de negocio, e limite da camada de armazenamento — a mesma
+    categoria do nome de coluna em minusculo). Visto pela primeira vez
+    no SC7010 (algum campo de observacao livre corrompido na origem).
     """
     df.columns = [c.strip().lower() for c in df.columns]
+    obj_cols = df.select_dtypes(include=["object", "string"]).columns
+    df[obj_cols] = df[obj_cols].apply(
+        lambda col: col.map(lambda v: v.replace("\x00", "") if isinstance(v, str) else v)
+    )
     df["_carregado_em"] = pd.Timestamp.now(tz="UTC")
     return df
 
