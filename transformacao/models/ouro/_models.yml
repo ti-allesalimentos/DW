@@ -507,6 +507,46 @@ models:
       - name: recno_origem
         tests: [unique, not_null]
 
+  - name: fato_produto_acabado
+    description: >
+      Fato producao de produto acabado por OP — Protheus (SD3010,
+      TM=10). Grao filial+op+produto.
+    columns:
+      - name: sk_producao
+        tests: [unique, not_null]
+
+  - name: fato_consumo_producao
+    description: >
+      Fato consumo de materia-prima/insumo por OP — Protheus (SD3010,
+      CFOP contendo 'RE'). Grao filial+op+produto+data.
+    columns:
+      - name: sk_consumo
+        tests: [unique, not_null]
+
+  - name: fato_perdas_producao
+    description: >
+      Fato perdas de producao por OP — Protheus (SD3010, TM=507).
+      Grao filial+op+produto+data.
+    columns:
+      - name: sk_perda
+        tests: [unique, not_null]
+
+  - name: fato_entradas_custo
+    description: >
+      Fato itens de NF de entrada pra custeio — Protheus
+      (SF1010+SD1010, tipo N/C).
+    columns:
+      - name: recno_origem
+        tests: [unique, not_null]
+
+  - name: fato_custo_comissao_compra
+    description: >
+      Fato custo de comissao sobre compra — Protheus (SF1010 tipo 'C',
+      serie 'COM'). Nao confundir com fato_comissao (Fase 4, vendas).
+    columns:
+      - name: sk_custo_comissao
+        tests: [unique, not_null]
+
   - name: fato_comissao
     description: >
       Fato comissao — Protheus (SE5010, baixa de titulo). Grao: evento
