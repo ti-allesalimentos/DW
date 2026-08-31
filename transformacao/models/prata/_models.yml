@@ -309,3 +309,46 @@ models:
     columns:
       - name: recno_origem
         tests: [unique, not_null]
+
+  - name: stg_apontamento_producao
+    description: >
+      Apontamento de producao (SH6010) — operacao executada numa OP,
+      com horario e quantidade produzida. Grao recno_origem.
+    columns:
+      - name: recno_origem
+        tests: [unique, not_null]
+
+  - name: stg_ordem_producao
+    description: >
+      Ordem de producao (SC2010), cabecalho com quantidades e datas
+      planejadas/realizadas. Grao recno_origem.
+    columns:
+      - name: recno_origem
+        tests: [unique, not_null]
+      - name: op
+        tests: [not_null]
+
+  - name: stg_lancamento_producao
+    description: >
+      Lancamento de estoque ligado a OP — consumo de massa/insumo
+      (SD3010, TM>500). Grao recno_origem. Sem o filtro de filial
+      01004 do legado — ver nota no modelo.
+    columns:
+      - name: recno_origem
+        tests: [unique, not_null]
+
+  - name: stg_lancamento_indireto
+    description: >
+      Lancamento de estoque indireto, sem OP (SD3010, TM=505). Grao
+      recno_origem.
+    columns:
+      - name: recno_origem
+        tests: [unique, not_null]
+
+  - name: stg_reprocesso
+    description: >
+      Reprocesso de producao (SD3010, TM=200), com o produto-pai da OP
+      original. Grao recno_origem.
+    columns:
+      - name: recno_origem
+        tests: [unique, not_null]

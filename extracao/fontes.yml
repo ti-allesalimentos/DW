@@ -311,3 +311,33 @@ fontes:
     # acompanhar o tempo de ciclo se isso incomodar (mesmo problema que
     # o SC9010 tinha antes da Fase 3, mas aqui nao ha _STAMP_ pra
     # resolver).
+
+  # ---------- Industrial (Fase 6) ----------
+  - nome: SH6010           # apontamento de producao (OP x operacao)
+    tabela: SH6010
+    destino: bronze.sh6010
+    chave: R_E_C_N_O_
+    # sem _STAMP_ nem data de negocio confiavel — carga full. 43k linhas.
+
+  - nome: SD3010           # lancamento de estoque (consumo/reprocesso/producao)
+    tabela: SD3010
+    destino: bronze.sd3010
+    chave: R_E_C_N_O_
+    coluna_watermark: S_T_A_M_P_
+    tipo_watermark: timestamp
+    janela_movel_dias: 3
+
+  - nome: SC2010           # ordem de producao
+    tabela: SC2010
+    destino: bronze.sc2010
+    chave: R_E_C_N_O_
+    coluna_watermark: S_T_A_M_P_
+    tipo_watermark: timestamp
+    janela_movel_dias: 3
+
+  - nome: SG2010           # cadastro de operacao (roteiro de producao)
+    tabela: SG2010
+    destino: bronze.sg2010
+    chave: R_E_C_N_O_
+    # sem _STAMP_ nem data de negocio confiavel — carga full, tabela
+    # pequena (147 linhas).

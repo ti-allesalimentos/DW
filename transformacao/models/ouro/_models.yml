@@ -463,6 +463,50 @@ models:
       - name: recno_origem
         tests: [unique, not_null]
 
+  - name: dim_centro_custo
+    description: Centro de custo conformado (CTT010).
+    columns:
+      - name: sk_centro_custo
+        tests: [unique, not_null]
+      - name: cod_centro_custo
+        tests: [unique, not_null]
+
+  - name: fato_apontamento_producao
+    description: >
+      Fato apontamento de producao — Protheus (SH6010).
+    columns:
+      - name: recno_origem
+        tests: [unique, not_null]
+
+  - name: fato_ordem_producao
+    description: >
+      Fato ordem de producao — Protheus (SC2010).
+    columns:
+      - name: recno_origem
+        tests: [unique, not_null]
+
+  - name: fato_lancamento_producao
+    description: >
+      Fato lancamento de estoque em producao — Protheus (SD3010,
+      TM>500). Todas as filiais (o legado restringia a 01004).
+    columns:
+      - name: recno_origem
+        tests: [unique, not_null]
+
+  - name: fato_lancamento_indireto
+    description: >
+      Fato lancamento de estoque indireto — Protheus (SD3010, TM=505).
+    columns:
+      - name: recno_origem
+        tests: [unique, not_null]
+
+  - name: fato_reprocesso
+    description: >
+      Fato reprocesso de producao — Protheus (SD3010, TM=200).
+    columns:
+      - name: recno_origem
+        tests: [unique, not_null]
+
   - name: fato_comissao
     description: >
       Fato comissao — Protheus (SE5010, baixa de titulo). Grao: evento

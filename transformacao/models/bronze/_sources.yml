@@ -111,3 +111,20 @@ sources:
         description: Cadastro de tributo (ICMS, PIS, COFINS, IPI...).
       - name: f2d010
         description: Apuracao de tributo por item de NF (base, aliquota, valor).
+      - name: sh6010
+        description: Apontamento de producao (ordem de producao x operacao executada).
+        columns:
+          - name: r_e_c_n_o_
+            tests: [unique, not_null]
+      - name: sd3010
+        description: Lancamento de estoque (consumo de insumo, producao, reprocesso).
+        columns:
+          - name: r_e_c_n_o_
+            tests: [unique, not_null]
+      - name: sc2010
+        description: Ordem de producao (cabecalho, quantidades e datas planejadas/realizadas).
+        columns:
+          - name: r_e_c_n_o_
+            tests: [unique, not_null]
+      - name: sg2010
+        description: "Cadastro de operacao (roteiro de producao)."
