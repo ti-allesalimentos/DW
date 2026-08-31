@@ -270,3 +270,44 @@ fontes:
     chave: R_E_C_N_O_
     # sem _STAMP_ (confirmado no dicionario) — carga full, tabela pequena
     # (1,7k linhas).
+
+  # ---------- Fiscal (Fase 5) ----------
+  - nome: SFT010           # tributo por NF (ICMS/IPI/PIS/COFINS/IRRF/INSS)
+    tabela: SFT010
+    destino: bronze.sft010
+    chave: R_E_C_N_O_
+    coluna_watermark: S_T_A_M_P_
+    tipo_watermark: timestamp
+    janela_movel_dias: 3
+
+  - nome: SDT010           # tributo extraido do XML da NFe (pra conferencia)
+    tabela: SDT010
+    destino: bronze.sdt010
+    chave: R_E_C_N_O_
+    # sem _STAMP_ nem data de negocio confiavel (confirmado no
+    # dicionario) — carga full. 38,7k linhas.
+
+  - nome: AC9010           # anexo/documento digitalizado vinculado a NF
+    tabela: AC9010
+    destino: bronze.ac9010
+    chave: R_E_C_N_O_
+    # sem _STAMP_ nem qualquer coluna de data — carga full, tabela
+    # pequena (7,5k linhas).
+
+  - nome: F2B010           # cadastro de tributo (ICMS/PIS/COFINS/...)
+    tabela: F2B010
+    destino: bronze.f2b010
+    chave: R_E_C_N_O_
+    coluna_watermark: S_T_A_M_P_
+    tipo_watermark: timestamp
+    janela_movel_dias: 3
+
+  - nome: F2D010           # apuracao de tributo por item (base/aliquota/valor)
+    tabela: F2D010
+    destino: bronze.f2d010
+    chave: R_E_C_N_O_
+    # sem _STAMP_ nem data de negocio confiavel — carga full. 150k
+    # linhas: e a fonte mais cara do Fiscal sem watermark disponivel;
+    # acompanhar o tempo de ciclo se isso incomodar (mesmo problema que
+    # o SC9010 tinha antes da Fase 3, mas aqui nao ha _STAMP_ pra
+    # resolver).

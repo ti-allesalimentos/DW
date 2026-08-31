@@ -98,3 +98,16 @@ sources:
         description: Movimento bancario importado (OFX).
       - name: sev010
         description: Rateio de titulo por multiplas naturezas financeiras.
+      - name: sft010
+        description: Tributo por NF (ICMS/IPI/PIS/COFINS/IRRF/INSS), calculado pelo Protheus.
+        columns:
+          - name: r_e_c_n_o_
+            tests: [unique, not_null]
+      - name: sdt010
+        description: Tributo extraido do XML da NFe, pra conferencia contra o SFT010.
+      - name: ac9010
+        description: "Anexo/documento digitalizado vinculado a um registro (ex. NF de entrada)."
+      - name: f2b010
+        description: Cadastro de tributo (ICMS, PIS, COFINS, IPI...).
+      - name: f2d010
+        description: Apuracao de tributo por item de NF (base, aliquota, valor).

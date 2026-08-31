@@ -425,6 +425,44 @@ models:
       - name: recno_origem
         tests: [unique, not_null]
 
+  - name: fato_tributo_nf
+    description: >
+      Fato tributo por NF — Protheus (SFT010). Grao recno_origem.
+    columns:
+      - name: recno_origem
+        tests: [unique, not_null]
+
+  - name: fato_impostos_entrada
+    description: >
+      Fato tributo por item de NF de entrada, normalizado — Protheus
+      (SD1010 x F2D010/F2B010). Grao sk_linha.
+    columns:
+      - name: sk_linha
+        tests: [unique, not_null]
+
+  - name: fato_impostos_saida
+    description: >
+      Fato tributo por item de NF de saida, normalizado — Protheus
+      (SD2010 x F2D010/F2B010). Grao sk_linha.
+    columns:
+      - name: sk_linha
+        tests: [unique, not_null]
+
+  - name: fato_notas_servico
+    description: >
+      Fato notas fiscais de servico — Protheus (SF1010, especie 'NFS').
+    columns:
+      - name: recno_origem
+        tests: [unique, not_null]
+
+  - name: fato_notas_anexo
+    description: >
+      Fato NF de entrada x anexo digitalizado — Protheus (SF1010 x
+      AC9010).
+    columns:
+      - name: recno_origem
+        tests: [unique, not_null]
+
   - name: fato_comissao
     description: >
       Fato comissao — Protheus (SE5010, baixa de titulo). Grao: evento

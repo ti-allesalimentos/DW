@@ -266,3 +266,46 @@ models:
     columns:
       - name: recno_origem
         tests: [unique, not_null]
+
+  - name: stg_tributo_nf
+    description: >
+      Tributo por NF calculado pelo Protheus (SFT010), formato largo
+      (ICMS/IPI/PIS/COFINS/IRRF/INSS/ISS numa linha so). Grao
+      recno_origem.
+    columns:
+      - name: recno_origem
+        tests: [unique, not_null]
+      - name: filial
+        tests: [not_null]
+
+  - name: stg_impostos_entrada
+    description: >
+      Tributo por item de NF de entrada, formato normalizado (item x
+      tipo de tributo), via F2B010/F2D010. Grao sk_linha.
+    columns:
+      - name: sk_linha
+        tests: [unique, not_null]
+
+  - name: stg_impostos_saida
+    description: >
+      Tributo por item de NF de saida, formato normalizado — espelha
+      stg_impostos_entrada trocando SD1010 por SD2010. Grao sk_linha.
+    columns:
+      - name: sk_linha
+        tests: [unique, not_null]
+
+  - name: stg_notas_servico
+    description: >
+      Notas fiscais de servico (SF1010, especie 'NFS') com as
+      retencoes (IR/INSS/PIS/COFINS/CSLL/ISS). Grao recno_origem.
+    columns:
+      - name: recno_origem
+        tests: [unique, not_null]
+
+  - name: stg_notas_anexo
+    description: >
+      NF de entrada (exceto SPED/CTE) x anexo digitalizado vinculado
+      (AC9010). Grao recno_origem.
+    columns:
+      - name: recno_origem
+        tests: [unique, not_null]
