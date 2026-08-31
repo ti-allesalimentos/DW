@@ -239,12 +239,17 @@ de produção depois do deploy — acompanhe `systemctl list-timers` e
 `ouro.controle_cargas` (nenhuma linha com `status='erro'` não tratada)
 por uma semana antes de considerar a Fase 3 fechada.
 
-**Atenção ao volume:** o ciclo completo levou ~21 minutos numa carga de
-teste (a maior parte é `SC9010`, 160 mil linhas recarregadas por inteiro
-a cada ciclo — não tem watermark confiável, mesma situação do `SC6010`).
-Isso ainda cabe folgado no intervalo de 2h do timer, mas acompanhe: se o
-volume dessas fontes crescer muito, o ciclo pode passar a demorar mais
-que o intervalo entre execuções.
+**Atenção ao volume:** a primeira carga de teste, com todas as fontes
+ainda em modo full, levou ~21 minutos (dominado por `SC9010`, 160 mil
+linhas recarregadas por inteiro). Isso motivou o watermark por
+`S_T_A_M_P_` (ver `extracao/fontes.yml`): toda fonte sem data de negócio
+confiável passou a ler só o que mudou desde o último ciclo, em vez da
+tabela inteira. Em regime estacionário o ciclo completo cai para
+~1-2 minutos (medido: 1m22s com `SC9010` lendo ~1 mil linhas em vez de
+160 mil). `DAK010` é a única exceção que ainda roda full a cada ciclo —
+não tem `_STAMP_` nem data de negócio confiável, e é barata (7,8 mil
+linhas). Acompanhe mesmo assim: se o volume de mudanças por ciclo
+crescer muito, o tempo pode voltar a subir.
 
 ## 7. O que nunca fazer
 

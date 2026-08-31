@@ -9,8 +9,14 @@
 #   destino           tabela no schema bronze
 #   chave             chave do MERGE. R_E_C_N_O_ e unico por tabela no
 #                     Protheus — resolve o incremental sem chave composta
-#   coluna_watermark  coluna de data para a carga incremental.
-#                     Ausente = carga full (dimensoes, baratas de recarregar)
+#   coluna_watermark  coluna de data/timestamp pra carga incremental.
+#                     Ausente = carga full (so quando nao ha nenhum campo
+#                     confiavel pra watermark, ex.: DAK010)
+#   tipo_watermark    'timestamp' pro _STAMP_ nativo do Protheus (datetime,
+#                     atualizado pelo proprio ERP a cada insercao/alteracao
+#                     em qualquer tabela — inclusive quando um cadastro e
+#                     marcado como deletado). Ausente = data de negocio em
+#                     texto YYYYMMDD (D2_EMISSAO e afins).
 #   colunas           opcional. Padrao '*' — pouso fiel, e traz de graca
 #                     os campos customizados (_X_) da Alles
 # =====================================================================
@@ -58,48 +64,76 @@ fontes:
     tabela: SC6010
     destino: bronze.sc6010
     chave: R_E_C_N_O_
-    # SC6 nao tem data propria confiavel: recarga full enquanto o volume permitir.
+    # SC6 nao tem data de negocio confiavel, mas tem _STAMP_ (ver topo do
+    # arquivo) — evita reler as ~60k linhas inteiras a cada ciclo.
+    coluna_watermark: S_T_A_M_P_
+    tipo_watermark: timestamp
+    janela_movel_dias: 3
 
-  # ---------- Cadastros (carga full: pequenos e mutaveis) ----------
+  # ---------- Cadastros (watermark por _STAMP_: sem data de negocio,
+  # mas o Protheus atualiza esse campo sozinho em toda alteracao) ----------
   - nome: SA1010          # clientes
     tabela: SA1010
     destino: bronze.sa1010
     chave: R_E_C_N_O_
+    coluna_watermark: S_T_A_M_P_
+    tipo_watermark: timestamp
+    janela_movel_dias: 3
 
   - nome: SA2010          # fornecedores
     tabela: SA2010
     destino: bronze.sa2010
     chave: R_E_C_N_O_
+    coluna_watermark: S_T_A_M_P_
+    tipo_watermark: timestamp
+    janela_movel_dias: 3
 
   - nome: SA3010          # vendedores e gerentes
     tabela: SA3010
     destino: bronze.sa3010
     chave: R_E_C_N_O_
+    coluna_watermark: S_T_A_M_P_
+    tipo_watermark: timestamp
+    janela_movel_dias: 3
 
   - nome: SB1010          # produtos
     tabela: SB1010
     destino: bronze.sb1010
     chave: R_E_C_N_O_
+    coluna_watermark: S_T_A_M_P_
+    tipo_watermark: timestamp
+    janela_movel_dias: 3
 
   - nome: SE4010          # condicoes de pagamento
     tabela: SE4010
     destino: bronze.se4010
     chave: R_E_C_N_O_
+    coluna_watermark: S_T_A_M_P_
+    tipo_watermark: timestamp
+    janela_movel_dias: 3
 
   # ---------- Pedidos: liberacao/embarque ----------
   - nome: SC9010          # liberacao de pedido de venda (embarque)
     tabela: SC9010
     destino: bronze.sc9010
     chave: R_E_C_N_O_
-    # sem data propria confiavel pra watermark (mesma razao do SC6010):
-    # recarga full enquanto o volume (160k linhas) permitir.
+    # a fonte mais cara do bronze (160k+ linhas): _STAMP_ evita reler a
+    # tabela inteira a cada ciclo de 2h do timer (Fase 3).
+    coluna_watermark: S_T_A_M_P_
+    tipo_watermark: timestamp
+    janela_movel_dias: 3
 
   - nome: SF4010          # tipos de operacao (TES)
     tabela: SF4010
     destino: bronze.sf4010
     chave: R_E_C_N_O_
+    coluna_watermark: S_T_A_M_P_
+    tipo_watermark: timestamp
+    janela_movel_dias: 3
 
   - nome: DAK010           # datas de embarque/carga
     tabela: DAK010
     destino: bronze.dak010
     chave: R_E_C_N_O_
+    # sem _STAMP_ nem data de negocio confiavel: unica fonte que ainda
+    # precisa de carga full (7,8k linhas, barata).

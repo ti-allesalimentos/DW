@@ -59,9 +59,18 @@ def montar_sql(fonte: dict, de: date | None, ate: date | None) -> str:
     sql = f"SELECT {colunas} FROM {fonte['tabela']}"
     coluna_data = fonte.get("coluna_watermark")
     if coluna_data and de and ate:
-        # Datas no Protheus sao texto YYYYMMDD.
-        sql += (f" WHERE {coluna_data} >= '{de:%Y%m%d}'"
-                f" AND {coluna_data} <= '{ate:%Y%m%d}'")
+        if fonte.get("tipo_watermark") == "timestamp":
+            # _STAMP_ e um datetime nativo do Protheus (nao texto), mantido
+            # pelo proprio ERP em toda tabela — atualiza sozinho a cada
+            # insercao/alteracao, inclusive quando um cadastro e marcado
+            # como deletado. Serve de watermark universal pras fontes sem
+            # data de negocio confiavel (cadastros, SC9010).
+            sql += (f" WHERE {coluna_data} >= '{de:%Y-%m-%d} 00:00:00'"
+                    f" AND {coluna_data} <= '{ate:%Y-%m-%d} 23:59:59'")
+        else:
+            # Datas no Protheus sao texto YYYYMMDD.
+            sql += (f" WHERE {coluna_data} >= '{de:%Y%m%d}'"
+                    f" AND {coluna_data} <= '{ate:%Y%m%d}'")
     return sql
 
 
@@ -119,7 +128,8 @@ def _garantir_tabela(cx, schema: str, tabela: str, staging: str, chave: str) -> 
 
 
 def _marcar_ausentes(cx, schema: str, tabela: str, staging: str, chave: str,
-                      coluna_watermark: str | None, de: date | None, ate: date | None) -> None:
+                      coluna_watermark: str | None, tipo_watermark: str | None,
+                      de: date | None, ate: date | None) -> None:
     """Marca como ausentes as linhas que sumiram da janela recem-extraida.
 
     Cobre o cancelamento de NF: se a chave nao voltou nesta leitura da janela
@@ -128,24 +138,30 @@ def _marcar_ausentes(cx, schema: str, tabela: str, staging: str, chave: str,
     """
     escopo, parametros = "TRUE", {}
     if coluna_watermark and de and ate:
-        # Datas no Protheus sao texto YYYYMMDD (ver montar_sql) — a coluna
-        # espelhada no bronze preserva esse tipo, entao a comparacao aqui
-        # tambem precisa ser textual, nao um date do Python.
-        escopo = f'"{coluna_watermark}" BETWEEN :de AND :ate'
-        parametros = {"de": f"{de:%Y%m%d}", "ate": f"{ate:%Y%m%d}"}
+        if tipo_watermark == "timestamp":
+            escopo = f'"{coluna_watermark}" BETWEEN :de AND :ate'
+            parametros = {"de": f"{de:%Y-%m-%d} 00:00:00", "ate": f"{ate:%Y-%m-%d} 23:59:59"}
+        else:
+            # Datas no Protheus sao texto YYYYMMDD (ver montar_sql) — a coluna
+            # espelhada no bronze preserva esse tipo, entao a comparacao aqui
+            # tambem precisa ser textual, nao um date do Python.
+            escopo = f'"{coluna_watermark}" BETWEEN :de AND :ate'
+            parametros = {"de": f"{de:%Y%m%d}", "ate": f"{ate:%Y%m%d}"}
     cx.execute(text(f"""
         UPDATE {schema}.{tabela} AS t
         SET "_deletado" = true, "_deletado_em" = now()
         WHERE {escopo}
           AND t."_deletado" = false
           AND NOT EXISTS (
-              SELECT 1 FROM {schema}.{staging} s WHERE s."{chave}" = t."{chave}"
+              SELECT 1 FROM {schema}.{staging} s
+              WHERE s."{chave}"::text = t."{chave}"::text
           )
     """), parametros)
 
 
 def _gravar(pg: Engine, df: pd.DataFrame, destino: str, chave: str, *,
-            coluna_watermark: str | None, de: date | None, ate: date | None) -> int:
+            coluna_watermark: str | None, tipo_watermark: str | None,
+            de: date | None, ate: date | None) -> int:
     """Grava em staging e faz MERGE na tabela definitiva do bronze.
 
     O MERGE roda em transacao unica: falha no meio nao deixa bronze parcial,
@@ -163,15 +179,27 @@ def _gravar(pg: Engine, df: pd.DataFrame, destino: str, chave: str, *,
 
     with pg.begin() as cx:
         _garantir_tabela(cx, schema, tabela, staging, chave)
+        # to_sql recria a staging a cada lote e reinfere o tipo pelo
+        # conteudo (ex.: um lote pequeno com a coluna toda nula vira text
+        # mesmo se o bronze ja tem essa coluna como double precision).
+        # Casta pro tipo ja fixado no bronze pra nao quebrar o INSERT.
+        tipos_destino = {r[0]: r[1] for r in cx.execute(text("""
+            SELECT column_name, data_type FROM information_schema.columns
+            WHERE table_schema = :schema AND table_name = :tabela
+        """), {"schema": schema, "tabela": tabela})}
+        lista_select = ", ".join(
+            f'"{c}"::{tipos_destino[c]}' if c in tipos_destino else f'"{c}"'
+            for c in colunas
+        )
         resultado = cx.execute(text(f"""
             INSERT INTO {schema}.{tabela} ({lista}, "_deletado", "_deletado_em")
-            SELECT {lista}, false, NULL FROM {schema}.{staging}
+            SELECT {lista_select}, false, NULL FROM {schema}.{staging}
             ON CONFLICT ("{chave}") DO UPDATE SET
                 {atualiza}, "_deletado" = false, "_deletado_em" = NULL
         """))
         coluna_watermark_normalizada = coluna_watermark.lower() if coluna_watermark else None
         _marcar_ausentes(cx, schema, tabela, staging, chave,
-                          coluna_watermark_normalizada, de, ate)
+                          coluna_watermark_normalizada, tipo_watermark, de, ate)
         cx.execute(text(f"DROP TABLE IF EXISTS {schema}.{staging}"))
     return resultado.rowcount or len(df)
 
@@ -188,7 +216,8 @@ def extrair(fonte: dict, *, modo: str, de: date | None, ate: date | None,
         # Mesmo com 0 linhas lidas, _gravar roda: e o caso em que tudo o que
         # estava na janela foi cancelado na origem e precisa ser marcado.
         gravadas = _gravar(pg, df, fonte["destino"], fonte["chave"].lower(),
-                            coluna_watermark=fonte.get("coluna_watermark"), de=de, ate=ate)
+                            coluna_watermark=fonte.get("coluna_watermark"),
+                            tipo_watermark=fonte.get("tipo_watermark"), de=de, ate=ate)
         watermark.fechar(pg, execucao, lidas=lidas, gravadas=gravadas)
         print(f"  [{nome}] {lidas:,} lidas / {gravadas:,} gravadas.")
     except Exception:
@@ -214,7 +243,12 @@ def main() -> int:
 
     if args.listar:
         for f in fontes:
-            tipo = "incremental" if f.get("coluna_watermark") else "full"
+            if not f.get("coluna_watermark"):
+                tipo = "full"
+            elif f.get("tipo_watermark") == "timestamp":
+                tipo = "incremental/_stamp_"
+            else:
+                tipo = "incremental"
             print(f"{f['nome']:12s} -> {f['destino']:28s} ({tipo}, chave {f['chave']})")
         return 0
 
@@ -226,6 +260,29 @@ def main() -> int:
         print(f"[{nome}] iniciando.")
         if not fonte.get("coluna_watermark"):
             extrair(fonte, modo="full", de=None, ate=None, pr=pr, pg=pg)
+            continue
+
+        if fonte.get("tipo_watermark") == "timestamp":
+            # _STAMP_ marca a ultima alteracao, nao a validade do registro:
+            # um cadastro migrado do sistema anterior pode ter _STAMP_
+            # anterior a entrada do Protheus e seguir valido hoje. Por
+            # isso a primeira carga desta fonte tem que ser cheia, sem o
+            # piso de INICIO_PROTHEUS — so a partir da segunda a janela
+            # incremental (que so olha pra frente a partir de um watermark
+            # ja estabelecido) entra em cena. --carga-inicial nao se aplica
+            # aqui: nao ha lotes anuais pra um cadastro.
+            if watermark.ultimo_watermark(pg, nome) is None:
+                # de=None mantem a leitura sem filtro (full de verdade);
+                # ate=hoje grava um watermark_ate real, senao
+                # ultimo_watermark() nunca deixa de ver None e a fonte
+                # fica presa em modo full pra sempre.
+                extrair(fonte, modo="full", de=None, ate=hoje, pr=pr, pg=pg)
+            else:
+                de, ate = watermark.janela(
+                    pg, nome, fonte.get("janela_movel_dias", JANELA_PADRAO),
+                    INICIO_PROTHEUS, hoje)
+                print(f"  janela: {de} a {ate}")
+                extrair(fonte, modo="incremental", de=de, ate=ate, pr=pr, pg=pg)
             continue
 
         if args.carga_inicial:
