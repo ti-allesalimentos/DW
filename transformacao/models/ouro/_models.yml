@@ -275,6 +275,31 @@ models:
                 to: ref('dim_vendedor')
                 field: sk_vendedor
 
+  - name: fato_comissao
+    description: >
+      Fato comissao — Protheus (SE5010, baixa de titulo). Grao: evento
+      de baixa, nao item de NF. Carrega vendedor, gerente e "PF" na
+      mesma linha, cada um com seu percentual e valor.
+    columns:
+      - name: sk_comissao
+        tests: [unique, not_null]
+      - name: sk_cliente
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_cliente')
+                field: sk_cliente
+      - name: sk_vendedor
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_vendedor')
+                field: sk_vendedor
+      - name: valor
+        tests: [not_null]
+
   - name: fato_faturamento_datavale
     description: >
       Fato faturamento — historico DATAVALE (02/2024 a 01/2025). Grao:

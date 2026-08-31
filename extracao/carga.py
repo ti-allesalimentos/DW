@@ -39,6 +39,11 @@ CONFIG = RAIZ / "fontes.yml"
 JANELA_PADRAO = int(os.getenv("JANELA_MOVEL_DIAS", "45"))
 INICIO_PROTHEUS = date.fromisoformat(os.getenv("DATA_INICIO_PROTHEUS", "2025-02-01"))
 TAMANHO_LOTE = 50_000
+# Postgres recusa mais de 65535 parametros por statement. Uma tabela larga
+# (SE1010 tem 305 colunas) com TAMANHO_LOTE fixo monta um INSERT multi-row
+# gigante e estoura a memoria do driver antes disso. O lote efetivo cai
+# conforme a tabela fica mais larga.
+LIMITE_PARAMETROS_POSTGRES = 20_000
 
 
 def carregar_config() -> list[dict]:
@@ -170,8 +175,9 @@ def _gravar(pg: Engine, df: pd.DataFrame, destino: str, chave: str, *,
     schema, tabela = destino.split(".")
     staging = f"{tabela}__staging"
 
+    tamanho_lote = max(1, min(TAMANHO_LOTE, LIMITE_PARAMETROS_POSTGRES // max(1, len(df.columns))))
     df.to_sql(staging, pg, schema=schema, if_exists="replace",
-              index=False, chunksize=TAMANHO_LOTE, method="multi")
+              index=False, chunksize=tamanho_lote, method="multi")
 
     colunas = list(df.columns)
     lista = ", ".join(f'"{c}"' for c in colunas)

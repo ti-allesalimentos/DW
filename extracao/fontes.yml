@@ -137,3 +137,136 @@ fontes:
     chave: R_E_C_N_O_
     # sem _STAMP_ nem data de negocio confiavel: unica fonte que ainda
     # precisa de carga full (7,8k linhas, barata).
+
+  # ---------- Financeiro (Fase 4) ----------
+  # SE1/SE2/SE5 tem data de emissao, mas um titulo fica aberto por meses e
+  # a baixa (ou renegociacao) pode acontecer bem depois da emissao — um
+  # watermark por emissao perderia essa atualizacao tardia. _STAMP_ evita
+  # esse buraco: pega qualquer alteracao no titulo, aberto ha quanto tempo
+  # for.
+  - nome: SE1010           # titulos a receber
+    tabela: SE1010
+    destino: bronze.se1010
+    chave: R_E_C_N_O_
+    coluna_watermark: S_T_A_M_P_
+    tipo_watermark: timestamp
+    janela_movel_dias: 3
+
+  - nome: SE2010           # titulos a pagar
+    tabela: SE2010
+    destino: bronze.se2010
+    chave: R_E_C_N_O_
+    coluna_watermark: S_T_A_M_P_
+    tipo_watermark: timestamp
+    janela_movel_dias: 3
+
+  - nome: SE5010           # movimento bancario (baixas, comissao)
+    tabela: SE5010
+    destino: bronze.se5010
+    chave: R_E_C_N_O_
+    coluna_watermark: S_T_A_M_P_
+    tipo_watermark: timestamp
+    janela_movel_dias: 3
+
+  - nome: SED010           # natureza financeira (descricao)
+    tabela: SED010
+    destino: bronze.sed010
+    chave: R_E_C_N_O_
+    coluna_watermark: S_T_A_M_P_
+    tipo_watermark: timestamp
+    janela_movel_dias: 3
+
+  - nome: CQ0010           # saldo/movimento de contas correntes
+    tabela: CQ0010
+    destino: bronze.cq0010
+    chave: R_E_C_N_O_
+    coluna_watermark: S_T_A_M_P_
+    tipo_watermark: timestamp
+    janela_movel_dias: 3
+
+  - nome: CT1010           # plano de contas
+    tabela: CT1010
+    destino: bronze.ct1010
+    chave: R_E_C_N_O_
+    coluna_watermark: S_T_A_M_P_
+    tipo_watermark: timestamp
+    janela_movel_dias: 3
+
+  - nome: SA6010           # bancos/contas correntes cadastradas
+    tabela: SA6010
+    destino: bronze.sa6010
+    chave: R_E_C_N_O_
+    coluna_watermark: S_T_A_M_P_
+    tipo_watermark: timestamp
+    janela_movel_dias: 3
+
+  - nome: F7G010           # motivos de baixa
+    tabela: F7G010
+    destino: bronze.f7g010
+    chave: R_E_C_N_O_
+    coluna_watermark: S_T_A_M_P_
+    tipo_watermark: timestamp
+    janela_movel_dias: 3
+
+  - nome: FRV010           # carteira/situacao de cobranca
+    tabela: FRV010
+    destino: bronze.frv010
+    chave: R_E_C_N_O_
+    coluna_watermark: S_T_A_M_P_
+    tipo_watermark: timestamp
+    janela_movel_dias: 3
+
+  - nome: SIG010           # conciliador bancario
+    tabela: SIG010
+    destino: bronze.sig010
+    chave: R_E_C_N_O_
+    coluna_watermark: S_T_A_M_P_
+    tipo_watermark: timestamp
+    janela_movel_dias: 3
+
+  - nome: CTT010           # centro de custo
+    tabela: CTT010
+    destino: bronze.ctt010
+    chave: R_E_C_N_O_
+    coluna_watermark: S_T_A_M_P_
+    tipo_watermark: timestamp
+    janela_movel_dias: 3
+
+  - nome: SX5010           # tabelas genericas do Protheus (parametrizacao)
+    tabela: SX5010
+    destino: bronze.sx5010
+    chave: R_E_C_N_O_
+    coluna_watermark: S_T_A_M_P_
+    tipo_watermark: timestamp
+    janela_movel_dias: 3
+
+  - nome: SBM010           # grupo de produtos
+    tabela: SBM010
+    destino: bronze.sbm010
+    chave: R_E_C_N_O_
+    coluna_watermark: S_T_A_M_P_
+    tipo_watermark: timestamp
+    janela_movel_dias: 3
+
+  - nome: FK5010           # movimento bancario importado (OFX)
+    tabela: FK5010
+    destino: bronze.fk5010
+    chave: R_E_C_N_O_
+    coluna_watermark: S_T_A_M_P_
+    tipo_watermark: timestamp
+    janela_movel_dias: 3
+
+  - nome: FK7010           # movimento bancario importado (OFX)
+    tabela: FK7010
+    destino: bronze.fk7010
+    chave: R_E_C_N_O_
+    coluna_watermark: S_T_A_M_P_
+    tipo_watermark: timestamp
+    janela_movel_dias: 3
+
+  - nome: SEV010           # rateio de titulo por multiplas naturezas
+    tabela: SEV010
+    destino: bronze.sev010
+    chave: R_E_C_N_O_
+    # sem _STAMP_ (confirmado no dicionario) — carga full, tabela pequena
+    # (1,7k linhas).

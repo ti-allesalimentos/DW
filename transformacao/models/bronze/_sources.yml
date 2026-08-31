@@ -57,3 +57,44 @@ sources:
         description: Tipos de operacao (TES).
       - name: dak010
         description: Datas de embarque/carga.
+      - name: se1010
+        description: Titulos a receber (contas a receber).
+        columns:
+          - name: r_e_c_n_o_
+            tests: [unique, not_null]
+      - name: se2010
+        description: Titulos a pagar (contas a pagar).
+        columns:
+          - name: r_e_c_n_o_
+            tests: [unique, not_null]
+      - name: se5010
+        description: Movimento bancario — baixas de titulos, base da comissao.
+        columns:
+          - name: r_e_c_n_o_
+            tests: [unique, not_null]
+      - name: sed010
+        description: Naturezas financeiras (descricao).
+      - name: cq0010
+        description: Saldo/movimento de contas correntes.
+      - name: ct1010
+        description: Plano de contas.
+      - name: sa6010
+        description: Bancos e contas correntes cadastradas.
+      - name: f7g010
+        description: Motivos de baixa de titulo.
+      - name: frv010
+        description: Carteira/situacao de cobranca.
+      - name: sig010
+        description: Conciliador bancario.
+      - name: ctt010
+        description: Centros de custo.
+      - name: sx5010
+        description: Tabelas genericas do Protheus (parametrizacao).
+      - name: sbm010
+        description: Grupos de produto.
+      - name: fk5010
+        description: Movimento bancario importado (OFX).
+      - name: fk7010
+        description: Movimento bancario importado (OFX).
+      - name: sev010
+        description: Rateio de titulo por multiplas naturezas financeiras.

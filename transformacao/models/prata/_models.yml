@@ -163,3 +163,18 @@ models:
           config:
             severity: warn
             error_if: ">1000"
+
+  - name: stg_comissao
+    description: >
+      Comissao sobre baixa de titulo (SE5010), agregada por evento de
+      baixa. Fase 4 — carryover da Fase 2, que adiou comissao por
+      depender de tabelas do Financeiro (SE1010/SE5010).
+    columns:
+      - name: filial
+        tests: [not_null]
+      - name: titulo
+        tests: [not_null]
+      - name: chave_cliente
+        tests: [not_null]
+      - name: valor
+        tests: [not_null]
