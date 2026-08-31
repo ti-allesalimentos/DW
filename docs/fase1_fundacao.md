@@ -1,229 +1,250 @@
 # Fase 1 — Fundação do DW
 
-> Plano de execução detalhado. Cada tarefa tem critério de aceite verificável.
-> Referência de arquitetura: `docs/arquitetura.md` (v1.2).
-> Executado pelo Claude Code local, na pasta `C:\Projetos\alles-dataplatform`.
-> 20/08/2026.
+> Plano de **execução**. O código da fundação já está no repositório desde 24/08/2026;
+> o que resta é rodar, conferir e fechar cada critério de aceite.
+> Referência de arquitetura: `docs/arquitetura.md` (v1.5).
+> Operação passo a passo: `docs/execucao.md`.
+> Executado pelo Claude Code local, em `C:\Projetos\alles-dataplatform`.
+> Versão 2 — 24/08/2026.
 
-**Meta da fase:** repositório versionado, camadas bronze/prata/ouro criadas, projeto
-dbt configurado, extrator incremental funcionando e o bronze do comercial populado com
-o histórico completo do Protheus.
+**Meta da fase:** repositório versionado, camadas `bronze`/`prata`/`ouro` criadas,
+extrator incremental funcionando, `dbt build` verde e o `bronze.sd2010` populado com
+todo o histórico do Protheus.
 
-**Não faz parte desta fase:** modelo dimensional do ouro, marts, dashboards. A Fase 1
-entrega a fundação sobre a qual a Fase 2 constrói o comercial.
+**Não faz parte desta fase:** modelo dimensional do ouro, marts, dashboards.
 
 ---
 
-## T1 — Git e higiene do repositório
+## O que já está no repositório
+
+| Componente | Arquivos |
+|---|---|
+| Extrator | `extracao/conexao.py`, `watermark.py`, `carga.py`, `fontes.yml` |
+| DDL | `infra/sql/00_schemas.sql`, `01_controle_cargas.sql` |
+| Ambiente | `infra/docker-compose.yml`, `.env.example`, `requirements.txt` |
+| dbt | `transformacao/` — projeto, macros, sources, `stg_faturamento`, 6 seeds |
+| Documentação | `README.md`, `docs/execucao.md` |
+| Legado preservado | `legado/` — ingestion, sql, dashboards, dagster, dbt, config |
+
+**Nada foi executado ainda.** Não há git, o Postgres novo não subiu, nenhuma carga rodou.
+
+---
+
+## Decisões de desenho que o código já reflete
+
+**O bronze espelha tabelas do Protheus, não queries de domínio.** A query de referência
+usava `INNER JOIN` com `SC5010` e `SA1010` — e um INNER JOIN é decisão de negócio
+disfarçada de detalhe técnico: descarta silenciosamente todo item sem pedido ou sem
+cliente. No pouso fiel isso não pode existir. Cada tabela é extraída uma vez e serve aos
+nove domínios; os joins acontecem na prata.
+
+**`R_E_C_N_O_` é a chave do MERGE.** É único por tabela no Protheus, o que dispensa
+chave de negócio composta e torna o incremental trivial.
+
+**`SELECT *` no bronze.** Pouso fiel de verdade, e traz de graça os campos customizados
+(`_X_`) que a Alles criou — que nenhum inventário mapeou por completo.
+
+---
+
+## T1 — Git e segurança *(pré-requisito de tudo)*
 
 O projeto não tem histórico. Nada mais começa antes disso.
 
-1. `git init` na raiz de `alles-dataplatform`.
-2. `.gitignore` cobrindo: `.venv/`, `venv/`, `__pycache__/`, `*.pyc`, `.env`,
-   `logs/`, `dados/`, `*.xlsx` de trabalho.
-3. Commit inicial com o estado atual (serve de marco de "antes da reconstrução").
+1. `git init` na raiz.
+2. Conferir o `.gitignore` já entregue: deve cobrir `.env`, `.venv/`, `__pycache__/`,
+   `target/`, `dbt_packages/`, `profiles.yml`, `*.tgz`.
+3. Commit inicial — marco do "antes da reconstrução".
 4. Criar repositório remoto **privado** e fazer o push.
-5. **Verificação de segurança:** conferir se algum dos seis repositórios de relatório
-   tem `.env` versionado — todos têm credenciais do Protheus no arquivo. Se houver,
-   remover do histórico e rotacionar a senha do usuário de leitura.
+5. **Verificação de segurança:** conferir se algum dos seis repositórios em
+   `C:\Projetos\relatorio-*` tem `.env` versionado. Todos têm credenciais do Protheus
+   dentro. Se algum estiver no histórico do git, a senha do usuário de leitura está
+   exposta.
 
-**Aceite:** `git log` mostra o commit inicial; `git status` limpo; `git check-ignore .env`
-retorna o arquivo; push no remoto concluído; nenhum `.env` rastreado em nenhum repo.
+**Aceite:** `git log` mostra o commit inicial; `git status` limpo;
+`git check-ignore .env` retorna o arquivo; push concluído; nenhum `.env` rastreado em
+nenhum repositório.
 
----
-
-## T2 — Estrutura de pastas e schemas
-
-Reorganizar o repositório para refletir as três camadas:
-
-```
-alles-dataplatform/
-├── extracao/          # extrator incremental (substitui ingestion/)
-│   ├── conexao.py
-│   ├── watermark.py
-│   ├── carga.py
-│   ├── dominios.yml   # config por domínio
-│   └── queries/       # SQL de origem, fiel, sem regra de negócio
-├── transformacao/     # projeto dbt (bronze -> prata -> ouro)
-├── infra/             # docker-compose, systemd units, scripts de manutenção
-├── docs/
-└── legado/            # sql/, dashboards/, ingestion/ antigos, preservados
-```
-
-No Postgres: criar `bronze`, `prata`, `ouro`. **Manter `raw` e `dw` intactos** — são a
-referência de comparação durante a Fase 2 e só serão removidos quando o comercial
-estiver reconciliado.
-
-**Aceite:** `\dn` lista os cinco schemas; a estrutura de pastas acima existe; o código
-antigo está em `legado/` e ainda roda.
+**Atenção:** rotacionar a senha exige ajustar os seis pipelines em produção. Planejar
+para não derrubar o farol diário — é o único ponto desta fase que toca no que roda hoje.
 
 ---
 
-## T3 — Tabela de controle de cargas
+## T2 — Ambiente e camadas
+
+```bash
+cp .env.example .env      # preencher; usuário do Protheus SOMENTE LEITURA
+python -m venv .venv && .venv\Scripts\activate
+pip install -r requirements.txt
+docker compose -f infra/docker-compose.yml up -d
+psql ... -f infra/sql/00_schemas.sql
+psql ... -f infra/sql/01_controle_cargas.sql
+```
+
+O extrator exige o **ODBC Driver 18 for SQL Server**.
+
+Os schemas `raw` e `dw` do piloto anterior **ficam intactos** — são a referência de
+comparação da T7 e só saem quando o comercial estiver reconciliado.
+
+**Aceite:** `\dn` lista `bronze`, `prata`, `ouro`, `raw`, `dw`;
+`select * from ouro.vw_saude_cargas` responde (vazia).
+
+---
+
+## T3 — Primeira carga e prova de idempotência
+
+Começar pequeno. `SB1010` é cadastro de produtos: rápido, e exercita conexão, criação
+de tabela, MERGE e registro de controle.
+
+```bash
+python -m extracao.carga --listar          # só imprime o plano, não toca em nada
+python -m extracao.carga --fonte SB1010
+python -m extracao.carga --fonte SB1010    # de novo — a contagem não pode mudar
+```
+
+**Aceite:** `bronze.sb1010` populada com PK em `r_e_c_n_o_`; duas execuções seguidas
+produzem contagem idêntica; `ouro.controle_cargas` tem duas linhas com
+`status = 'sucesso'`.
+
+Este é o teste que importa antes de qualquer coisa pesada. Se a idempotência falhar
+aqui, falha em escala no `SD2010`.
+
+---
+
+## T4 — Demais cadastros
+
+```bash
+python -m extracao.carga --fonte SA1010    # clientes
+python -m extracao.carga --fonte SA3010    # vendedores
+python -m extracao.carga --fonte SA2010    # fornecedores
+python -m extracao.carga --fonte SE4010    # condições de pagamento
+python -m extracao.carga --fonte SC6010    # itens de pedido
+```
+
+Todos em carga full — são pequenos e mutáveis.
+
+**Aceite:** cada tabela do bronze com contagem plausível contra o `raw` correspondente;
+nenhuma carga com `status = 'erro'`.
+
+---
+
+## T5 — dbt
+
+```bash
+cd transformacao
+dbt deps
+dbt seed        # carrega as regras versionadas
+dbt build       # modelos + testes
+dbt docs generate
+```
+
+O `stg_faturamento` depende do `bronze.sd2010`, então só ficará verde depois da T6 —
+até lá, rodar `dbt seed` e `dbt build --select seeds` para validar as regras.
+
+**Aceite dos seeds:** `prata.map_produto_cx` com **10 linhas** (não 8);
+`prata.excecoes_nf` com 38; testes de unicidade verdes.
+
+---
+
+## T6 — Carga inicial do histórico
+
+A operação mais pesada do projeto: ler todo o `SD2010` do Protheus **de produção**.
+O histórico começa em **01/02/2025**, data de entrada do ERP — nada antes disso é
+faturamento.
+
+```bash
+python -m extracao.carga --fonte SD2010 --carga-inicial
+```
+
+Regras, não sugestões:
+
+1. **Fora do horário comercial**, combinado com quem opera o ERP.
+2. Lote anual. **Medir cada lote antes de seguir** — a duração fica em
+   `ouro.controle_cargas`.
+3. Se um lote degradar o ERP de forma perceptível, **parar**. O watermark preserva o
+   que já entrou; retomar é seguro.
+
+Depois: `SF2010`, `SD1010`, `SF1010`, `SC5010` — mesma mecânica, volumes menores.
+
+**Aceite:** `bronze.sd2010` com o histórico completo; duração por lote registrada;
+nenhuma reclamação de lentidão do ERP.
+
+---
+
+## T7 — Conferência contra o legado
+
+Agora o `dbt build` completo deve fechar.
 
 ```sql
-CREATE TABLE ouro.controle_cargas (
-    id              bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    dominio         text NOT NULL,
-    inicio          timestamptz NOT NULL DEFAULT now(),
-    fim             timestamptz,
-    watermark_de    date,
-    watermark_ate   date,
-    linhas_lidas    bigint,
-    linhas_gravadas bigint,
-    status          text NOT NULL,   -- 'rodando' | 'sucesso' | 'erro'
-    mensagem_erro   text
-);
-CREATE INDEX ix_controle_dominio ON ouro.controle_cargas (dominio, inicio DESC);
+-- Bronze traz MAIS que o raw: ele não filtra regra de negócio.
+select count(*) from bronze.sd2010;
+select count(*) from raw.faturamento;
+
+-- A prata, com as regras aplicadas, deve se aproximar do raw.
+select count(*), sum(total) from prata.stg_faturamento;
 ```
 
-O watermark de cada domínio é lido da última execução com `status = 'sucesso'`.
+A diferença entre `bronze` e `prata` tem que ser **exatamente** o que os seeds filtram:
+CFOP fora da lista, filial inativa, cliente excluído, nota na lista de exceções,
+`d_e_l_e_t_ = '*'`. Nada além.
 
-**Aceite:** tabela criada; uma execução de teste registra linha com `status='rodando'`
-e a atualiza para `'sucesso'` ao final; consulta do watermark devolve a data correta.
-
----
-
-## T4 — Extrator incremental
-
-Substitui `ingestion/extract_protheus.py`. Comportamento por domínio:
-
-1. Lê o watermark da última carga com sucesso.
-2. Extrai do Protheus de `watermark − janela_movel` até hoje (janela padrão: 45 dias).
-3. Grava em tabela de staging no bronze.
-4. `MERGE` do staging para a tabela definitiva pela chave de negócio.
-5. Marca como ausentes as linhas que sumiram da janela (cancelamentos de NF).
-6. Registra o resultado em `ouro.controle_cargas`.
-
-Configuração declarativa em `extracao/dominios.yml`:
-
-```yaml
-dominios:
-  - nome: faturamento
-    query: queries/faturamento.sql
-    destino: bronze.faturamento
-    chave_negocio: [filial, nfe, serie, item_nf]
-    coluna_watermark: dt_emissao
-    janela_movel_dias: 45
-  - nome: clientes
-    query: queries/clientes.sql
-    destino: bronze.clientes
-    modo: full          # dimensões: carga completa
+```sql
+-- Quanto cada regra descarta — se algum número surpreender, investigar antes de seguir.
+select
+    count(*) filter (where d_e_l_e_t_ = '*')                                as deletados,
+    count(*) filter (where btrim(d2_cf) not in (select cfop from prata.cfops_venda))   as fora_cfop,
+    count(*) filter (where btrim(d2_filial) not in (select filial from prata.filiais_ativas)) as fora_filial
+from bronze.sd2010;
 ```
 
-Requisitos não-funcionais:
-
-- **Idempotência:** rodar duas vezes seguidas não altera a contagem de linhas.
-- **Atomicidade:** o MERGE roda em transação — falha no meio não deixa bronze parcial.
-- **Modo carga inicial:** `--carga-inicial --de 2015 --ate 2026` processa por lotes
-  anuais, avançando o watermark a cada lote concluído.
-
-**Aceite:** duas execuções consecutivas do domínio faturamento produzem a mesma
-contagem; interromper o processo no meio não deixa dados parciais; uma NF alterada no
-Protheus dentro da janela aparece atualizada no bronze; `controle_cargas` registra
-todas as execuções.
+**Aceite:** toda divergência entre `prata.stg_faturamento` e `raw.faturamento`
+identificada e explicada, registrada em `docs/reconciliacao_comercial.md`.
 
 ---
 
-## T5 — Queries do bronze, sem regra de negócio
+## T8 — Calendário gerado por código *(ainda a escrever)*
 
-Reescrever as 11 queries de `ingestion/queries/` removendo tudo que é decisão:
+O `dCalendario.xlsx` deixa de ser fonte. Um modelo dbt gera a dimensão: ano, mês,
+trimestre, dia, nomes em português, dia útil, **ano fiscal Abr–Mar**, mês fiscal e
+feriados (nacionais, estaduais e os municipais que afetam as filiais).
 
-| Remover | Motivo |
-|---------|--------|
-| Lista das 38 NFs excluídas | Vira `seed` versionado, aplicado na prata |
-| `D2_CLIENTE <> '97316293'` | Vira exceção documentada, aplicada na prata |
-| `D2_EMISSAO > '20250131'` | Não é regra — era o alcance da planilha. Sai de vez |
-| Filtro de CFOP | Regra de negócio: vai para a prata, como seed de CFOPs de venda |
-| Filtro de filial | Idem — seed de filiais ativas |
-
-Manter: os joins estruturais (SD2←SF2, SC5, SA1) e **trazer `D_E_L_E_T_` como coluna**,
-sem filtrar. Isso encerra a divergência `= ''` versus `<> '*'` descrita no capítulo 9 da
-arquitetura: o bronze traz tudo, e a prata decide — uma vez só, documentadamente.
-
-O `CLAUDE.md` do `relatorio-clevel-protheus-semanal` já lista os campos confirmados por
-tabela e serve de referência para completar as queries.
-
-**Aceite:** `count(*)` do bronze ≥ `count(*)` do `raw` atual para cada domínio; a
-coluna `D_E_L_E_T_` existe e tem valores distintos; nenhuma query contém número de NF,
-código de cliente ou CFOP literal.
+**Aceite:** amostragem de 24 meses bate integralmente com o `dCalendario.xlsx` —
+ano fiscal, dia útil e feriado inclusive. Divergência é investigada e documentada
+antes de o gerado substituir a planilha.
 
 ---
 
-## T6 — Carga inicial do histórico completo
+## T9 — Seeds das demais fontes manuais *(ainda a escrever)*
 
-A operação mais pesada do projeto. Ler todo o `SD2010` do Protheus de produção.
+Converter em CSV versionado, a partir do `fManual.xlsx` (`P:\T.I\01. BASES`, já
+acessível): `familia`, `regiao`, `destino`, `motivo_dev`, `grupos`, `contas`.
 
-1. Rodar **fora do horário comercial**, um lote anual por vez.
-2. Medir e registrar duração e impacto de cada lote antes de seguir para o próximo.
-3. Abortar e reavaliar se algum lote degradar o ERP de forma perceptível.
-
-**Aceite:** `bronze.faturamento` com todo o histórico disponível; duração por lote
-registrada em `controle_cargas`; nenhuma reclamação de lentidão do ERP durante a janela.
+**Aceite:** nenhum seed lê de `P:\` em tempo de execução; todos versionados no git.
 
 ---
 
-## T7 — Projeto dbt
-
-1. `dbt init` dentro de `transformacao/`, adaptador `dbt-postgres`.
-2. `profiles.yml` lendo credenciais do `.env` — nunca com senha em arquivo versionado.
-3. Declarar as tabelas do bronze como `sources`, com testes de frescor
-   (`freshness`) para detectar carga que parou.
-4. Um modelo de prata de referência — `stg_faturamento` — aplicando TRIM, casts de
-   data, sentinela `1900-01-01` → NULL e a chave de cliente. Serve de padrão para os
-   demais.
-5. Seeds versionados: `map_produto_cx`, `excecoes_nf`, `excecoes_cliente`,
-   `cfops_venda`, `cfops_devolucao`, `filiais_ativas`, `regiao`, `destino`,
-   `motivo_dev`, `familia`.
-6. Testes em `stg_faturamento`: unicidade da chave de negócio, `not_null` nas colunas
-   obrigatórias, `accepted_values` no CFOP.
-
-**Aceite:** `dbt build` termina verde; `dbt docs generate` produz o grafo de linhagem;
-os seeds estão em CSV no git; nenhum seed vem de `P:\`.
-
----
-
-## T8 — Calendário gerado por código
-
-O `dCalendario.xlsx` deixa de ser fonte. Um modelo dbt gera a dimensão com:
-ano/mês/trimestre/dia, nome de mês e dia da semana em português, dia útil,
-**ano fiscal Abr–Mar**, mês fiscal e feriados (nacionais, estaduais e os municipais que
-afetam as filiais).
-
-**Aceite:** amostragem de 24 meses bate integralmente com o `dCalendario.xlsx` atual —
-ano fiscal, dia útil e feriado inclusive. Divergência encontrada é investigada e
-documentada antes de o gerado substituir a planilha.
-
----
-
-## T9 — Documentação
-
-`README.md` reescrito para o novo desenho e `docs/execucao.md` com o passo a passo
-operacional: subir o ambiente, rodar carga inicial, rodar carga incremental, consultar
-o controle de cargas, o que fazer quando uma carga falha.
-
-**Aceite:** alguém que nunca viu o projeto consegue subir o ambiente e rodar uma carga
-seguindo só a documentação.
-
----
-
-## Verificação de fechamento da fase
-
-Antes de declarar a Fase 1 concluída:
+## Fechamento da fase
 
 1. `dbt build` verde do zero, em ambiente limpo.
 2. Duas cargas incrementais consecutivas sem alterar contagem.
-3. `bronze.faturamento` com histórico completo e contagem ≥ `raw.faturamento`.
-4. Comparação bronze × raw: divergências identificadas e explicadas — devem ser
-   exatamente as linhas que o `raw` filtrava por regra de negócio, nada além.
+3. `bronze.sd2010` com histórico completo desde 01/02/2025.
+4. Divergências `prata` × `raw` explicadas uma a uma — só as regras dos seeds.
 5. Nenhuma credencial versionada em nenhum repositório.
 
 ---
 
-## Dependências e riscos desta fase
+## Riscos desta fase
 
-- **`P:\T.I\01. BASES`** ainda precisa estar acessível para T7 (conversão das fontes
-  manuais em seeds) e T8 (validação do calendário).
-- **Janela de carga inicial (T6)** precisa ser combinada com quem opera o ERP.
-- **Rotação de senha (T1)** pode exigir ajuste nos seis pipelines de relatório em
-  produção — planejar para não derrubar o farol diário.
+- **Janela da carga inicial (T6)** precisa ser combinada com quem opera o ERP.
+- **Rotação de senha (T1)** pode exigir ajuste nos seis pipelines em produção.
+- **`SELECT *` no bronze** traz tabelas largas (o `SD2010` tem centenas de colunas).
+  Se o volume incomodar, `fontes.yml` aceita lista explícita de colunas — mas isso
+  troca fidelidade por espaço, e a decisão deve ser consciente.
+
+---
+
+## Regra permanente
+
+**Nada do que está rodando é alterado.** `atualizador_1.9.xlsm`, os workbooks de
+`P:\T.I\01. BASES`, os relatórios do Power BI e os seis pipelines seguem intocados.
+Este DW nasce ao lado. A única exceção prevista é a rotação de senha da T1, e ela é
+planejada, não incidental.
