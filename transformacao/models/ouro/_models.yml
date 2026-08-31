@@ -275,6 +275,59 @@ models:
                 to: ref('dim_vendedor')
                 field: sk_vendedor
 
+  - name: dim_fornecedor
+    description: >
+      Fornecedor conformado (grao chave_fornecedor), espelha dim_cliente.
+      Inclui membro "NAO_IDENTIFICADO".
+    columns:
+      - name: sk_fornecedor
+        tests: [unique, not_null]
+      - name: chave_fornecedor
+        tests: [unique, not_null]
+
+  - name: dim_natureza_financeira
+    description: >
+      Natureza financeira conformada (grao cod_natureza, SED010).
+      Inclui membro "NAO_IDENTIFICADO".
+    columns:
+      - name: sk_natureza
+        tests: [unique, not_null]
+      - name: cod_natureza
+        tests: [unique, not_null]
+
+  - name: fato_contas_areceber
+    description: >
+      Fato contas a receber — Protheus (SE1010). Grao: titulo/parcela.
+    columns:
+      - name: recno_origem
+        tests: [unique, not_null]
+      - name: sk_cliente
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_cliente')
+                field: sk_cliente
+      - name: valor
+        tests: [not_null]
+
+  - name: fato_contas_apagar
+    description: >
+      Fato contas a pagar — Protheus (SE2010). Grao: titulo/parcela.
+      Exclui tipos FT/NDF/PA/PRE.
+    columns:
+      - name: recno_origem
+        tests: [unique, not_null]
+      - name: sk_fornecedor
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_fornecedor')
+                field: sk_fornecedor
+      - name: valor
+        tests: [not_null]
+
   - name: fato_comissao
     description: >
       Fato comissao — Protheus (SE5010, baixa de titulo). Grao: evento

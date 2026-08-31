@@ -178,3 +178,27 @@ models:
         tests: [not_null]
       - name: valor
         tests: [not_null]
+
+  - name: stg_contas_areceber
+    description: >
+      Titulos a receber (SE1010), conformados. Grao recno_origem, sem
+      filtro de negocio (universo inteiro, aberto ou baixado).
+    columns:
+      - name: recno_origem
+        tests: [unique, not_null]
+      - name: filial
+        tests: [not_null]
+      - name: chave_cliente
+        tests: [not_null]
+
+  - name: stg_contas_apagar
+    description: >
+      Titulos a pagar (SE2010), conformados. Grao recno_origem. Exclui
+      tipos FT/NDF/PA/PRE — ver nota no modelo.
+    columns:
+      - name: recno_origem
+        tests: [unique, not_null]
+      - name: filial
+        tests: [not_null]
+      - name: chave_fornecedor
+        tests: [not_null]

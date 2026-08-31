@@ -69,3 +69,54 @@ comparação acima já normaliza os dois lados antes de contar.
 O join legado com `SA3010` via `SA1.A1_VEND1` (variável `SA3_PF`) nunca é
 usado no `SELECT` nem no `GROUP BY` do `sqlComissao` — dead code do
 workbook, omitido em `stg_comissao` de propósito.
+
+## Contas a receber (`fato_contas_areceber`)
+
+Grão: `recno_origem` (SE1010 já é título/parcela, sem agregação). Sem
+filtro de negócio no legado (`sqlContasAReceber`) além do `D_E_L_E_T_` —
+universo inteiro, aberto ou baixado.
+
+### Resultado (31/08/2026)
+
+| Métrica | Legado (ao vivo) | Novo (`prata_ouro`) |
+|---|---|---|
+| Linhas | 38.405 | 38.404 |
+| Linhas só no legado | 1 | |
+| Linhas só no novo | 0 | |
+
+A única linha ausente (título 000031148, cliente 09477652, tipo NCC,
+filial 01004) não existe em `bronze.se1010` — foi criado no Protheus
+depois da carga do bronze (mesmo dia, mesma janela de drift do
+`fato_comissao`). O próximo ciclo incremental por `_STAMP_` traz.
+
+## Contas a pagar (`fato_contas_apagar`)
+
+Grão: `recno_origem` (SE2010 já é título/parcela). Exclui
+`E2_TIPO IN ('FT','NDF','PA','PRE')` — regra do `sqlContasApagar`/
+`fContasApagar`.
+
+**Achado de sedimento:** o mesmo workbook tem uma segunda versão da
+query (`sqlbase_pagar`/`base_pagar`) sem essa exclusão de tipo, só
+acrescentando o CNPJ do fornecedor. As duas não podem ser "a" contas a
+pagar oficial ao mesmo tempo. Adotamos `sqlContasApagar` como fato
+canônico porque é a que aparece descrita como `fato_contas_pagar` no
+inventário do legado (`docs/inventario_dw_legado.md`, cap. 3); a versão
+sem filtro parece existir só para alimentar `Fazer_dePara` (achar
+naturezas sem classificação), não como fato de consumo. Fica registrado
+aqui para o caso de alguém encontrar um número diferente comparando
+contra `base_pagar`.
+
+### Resultado (31/08/2026)
+
+| Métrica | Legado (ao vivo) | Novo (`prata_ouro`) |
+|---|---|---|
+| Linhas | 54.551 | 54.547 |
+| Linhas só no legado | 4 | |
+| Linhas só no novo | 0 | |
+
+Três das quatro linhas ausentes (NFs 000022026/33920102, 001609 e
+001610/20874253) não existem em `bronze.se2010` — mesmo caso de drift:
+criadas no Protheus depois da carga do bronze. A quarta é uma linha
+inteiramente em branco (todas as chaves vazias, valor zero) retornada
+pela query do SQL Server — não corresponde a um titulo real e não afeta
+nenhuma soma; não investigada a fundo por ter valor zero.
