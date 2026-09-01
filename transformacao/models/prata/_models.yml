@@ -496,3 +496,27 @@ models:
     columns:
       - name: filial
         tests: [not_null]
+
+  - name: stg_motivo_rescisao
+    description: >
+      Motivo de rescisao com valor pago (SRG010+SRA010+RCC010+SRR010).
+      Grao filial+matricula+cod_motivo+data_demissao.
+    columns:
+      - name: filial
+        tests: [not_null]
+
+  - name: stg_dupla_funcao
+    description: >
+      Funcionarios com evento de dupla funcao ativo (RG1010). Grao
+      recno_origem.
+    columns:
+      - name: recno_origem
+        tests: [unique, not_null]
+
+  - name: stg_historico_salarial
+    description: >
+      Historico de alteracao de salario base (SR3010), historico
+      completo (sem o corte de data do legado). Grao recno_origem.
+    columns:
+      - name: recno_origem
+        tests: [unique, not_null]

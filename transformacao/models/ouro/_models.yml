@@ -655,6 +655,45 @@ models:
       - name: sk_frete_entrada
         tests: [unique, not_null]
 
+  - name: dim_funcionario
+    description: Funcionario conformado (SRA010).
+    columns:
+      - name: sk_funcionario
+        tests: [unique, not_null]
+      - name: chave_funcionario
+        tests: [unique, not_null]
+
+  - name: dim_verba
+    description: Verba de folha conformada (SRV010).
+    columns:
+      - name: sk_verba
+        tests: [unique, not_null]
+      - name: cod_verba
+        tests: [unique, not_null]
+
+  - name: fato_motivo_rescisao
+    description: >
+      Fato motivo de rescisao com valor pago — Protheus
+      (SRG010+SRR010).
+    columns:
+      - name: sk_rescisao
+        tests: [unique, not_null]
+
+  - name: fato_dupla_funcao
+    description: >
+      Fato dupla funcao ativa — Protheus (RG1010).
+    columns:
+      - name: recno_origem
+        tests: [unique, not_null]
+
+  - name: fato_historico_salarial
+    description: >
+      Fato historico de alteracao de salario base — Protheus
+      (SR3010).
+    columns:
+      - name: recno_origem
+        tests: [unique, not_null]
+
   - name: fato_comissao
     description: >
       Fato comissao — Protheus (SE5010, baixa de titulo). Grao: evento

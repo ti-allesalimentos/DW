@@ -190,3 +190,75 @@ sources:
         columns:
           - name: r_e_c_n_o_
             tests: [unique, not_null]
+      - name: sra010
+        description: Cadastro de funcionarios (RH).
+        columns:
+          - name: r_e_c_n_o_
+            tests: [unique, not_null]
+      - name: src010
+        description: Movimentos periodicos de folha. Sem regra no legado (SELECT *) — servido direto pelo bronze.
+        columns:
+          - name: r_e_c_n_o_
+            tests: [unique, not_null]
+      - name: srd010
+        description: Movimentos historicos de folha (calculo). Sem regra no legado (SELECT *) — servido direto pelo bronze.
+        columns:
+          - name: r_e_c_n_o_
+            tests: [unique, not_null]
+      - name: srv010
+        description: Cadastro de verbas de folha.
+        columns:
+          - name: r_e_c_n_o_
+            tests: [unique, not_null]
+      - name: sp8010
+        description: Marcacoes de ponto. Sem regra no legado (SELECT *) — servido direto pelo bronze.
+        columns:
+          - name: r_e_c_n_o_
+            tests: [unique, not_null]
+      - name: sr8010
+        description: Controle de ausencias. Sem regra no legado (SELECT *) — servido direto pelo bronze.
+        columns:
+          - name: r_e_c_n_o_
+            tests: [unique, not_null]
+      - name: spc010
+        description: Apontamento (resumo diario de ponto). Sem regra no legado (SELECT *) — servido direto pelo bronze.
+        columns:
+          - name: r_e_c_n_o_
+            tests: [unique, not_null]
+      - name: spi010
+        description: Banco de horas. Sem regra no legado (SELECT *) — servido direto pelo bronze.
+        columns:
+          - name: r_e_c_n_o_
+            tests: [unique, not_null]
+      - name: spk010
+        description: Eventos abonados. Sem regra no legado (SELECT *) — servido direto pelo bronze.
+        columns:
+          - name: r_e_c_n_o_
+            tests: [unique, not_null]
+      - name: sph010
+        description: Apontamento historico. Sem regra no legado (SELECT *) — servido direto pelo bronze.
+        columns:
+          - name: r_e_c_n_o_
+            tests: [unique, not_null]
+      - name: srg010
+        description: Rescisao (cabecalho).
+        columns:
+          - name: r_e_c_n_o_
+            tests: [unique, not_null]
+      - name: rcc010
+        description: "Tabelas genericas de RH (parametrizacao, ex. motivos de rescisao)."
+      - name: srr010
+        description: Verbas pagas na rescisao/folha.
+        columns:
+          - name: r_e_c_n_o_
+            tests: [unique, not_null]
+      - name: rg1010
+        description: Eventos de dupla funcao.
+        columns:
+          - name: r_e_c_n_o_
+            tests: [unique, not_null]
+      - name: sr3010
+        description: Historico salarial.
+        columns:
+          - name: r_e_c_n_o_
+            tests: [unique, not_null]

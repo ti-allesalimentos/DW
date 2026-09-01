@@ -434,3 +434,114 @@ fontes:
     # sem _STAMP_ nem data de negocio confiavel — carga full. 131k
     # linhas: e a fonte mais cara da Logistica sem watermark disponivel
     # (mesma situacao do F2D010 na Fase 5).
+
+  # ---------- Gestao de Pessoas (Fase 10) ----------
+  - nome: SRA010           # funcionarios (cadastro)
+    tabela: SRA010
+    destino: bronze.sra010
+    chave: R_E_C_N_O_
+    coluna_watermark: S_T_A_M_P_
+    tipo_watermark: timestamp
+    janela_movel_dias: 3
+
+  - nome: SRC010           # movimentos periodicos de folha
+    tabela: SRC010
+    destino: bronze.src010
+    chave: R_E_C_N_O_
+    coluna_watermark: S_T_A_M_P_
+    tipo_watermark: timestamp
+    janela_movel_dias: 3
+
+  - nome: SRD010           # movimentos historicos de folha (calculo)
+    tabela: SRD010
+    destino: bronze.srd010
+    chave: R_E_C_N_O_
+    coluna_watermark: S_T_A_M_P_
+    tipo_watermark: timestamp
+    janela_movel_dias: 3
+
+  - nome: SRV010           # cadastro de verbas de folha
+    tabela: SRV010
+    destino: bronze.srv010
+    chave: R_E_C_N_O_
+    coluna_watermark: S_T_A_M_P_
+    tipo_watermark: timestamp
+    janela_movel_dias: 3
+
+  - nome: SP8010           # marcacoes de ponto
+    tabela: SP8010
+    destino: bronze.sp8010
+    chave: R_E_C_N_O_
+    # sem _STAMP_ — carga full. 27,5k linhas.
+
+  - nome: SR8010           # controle de ausencias
+    tabela: SR8010
+    destino: bronze.sr8010
+    chave: R_E_C_N_O_
+    coluna_watermark: S_T_A_M_P_
+    tipo_watermark: timestamp
+    janela_movel_dias: 3
+
+  - nome: SPC010           # apontamento (resumo diario de ponto)
+    tabela: SPC010
+    destino: bronze.spc010
+    chave: R_E_C_N_O_
+    coluna_watermark: S_T_A_M_P_
+    tipo_watermark: timestamp
+    janela_movel_dias: 3
+
+  - nome: SPI010           # banco de horas
+    tabela: SPI010
+    destino: bronze.spi010
+    chave: R_E_C_N_O_
+    coluna_watermark: S_T_A_M_P_
+    tipo_watermark: timestamp
+    janela_movel_dias: 3
+
+  - nome: SPK010           # eventos abonados
+    tabela: SPK010
+    destino: bronze.spk010
+    chave: R_E_C_N_O_
+    # sem _STAMP_ — carga full. 13,5k linhas.
+
+  - nome: SPH010           # apontamento historico
+    tabela: SPH010
+    destino: bronze.sph010
+    chave: R_E_C_N_O_
+    coluna_watermark: S_T_A_M_P_
+    tipo_watermark: timestamp
+    janela_movel_dias: 3
+
+  - nome: SRG010           # rescisao (cabecalho)
+    tabela: SRG010
+    destino: bronze.srg010
+    chave: R_E_C_N_O_
+    coluna_watermark: S_T_A_M_P_
+    tipo_watermark: timestamp
+    janela_movel_dias: 3
+
+  - nome: RCC010           # tabelas genericas de RH (parametrizacao)
+    tabela: RCC010
+    destino: bronze.rcc010
+    chave: R_E_C_N_O_
+    # sem _STAMP_ — carga full. 5,7k linhas.
+
+  - nome: SRR010           # verbas pagas na rescisao/folha
+    tabela: SRR010
+    destino: bronze.srr010
+    chave: R_E_C_N_O_
+    coluna_watermark: S_T_A_M_P_
+    tipo_watermark: timestamp
+    janela_movel_dias: 3
+
+  - nome: RG1010           # eventos de dupla funcao
+    tabela: RG1010
+    destino: bronze.rg1010
+    chave: R_E_C_N_O_
+    # sem _STAMP_ — carga full. 598 linhas.
+
+  - nome: SR3010           # historico salarial
+    tabela: SR3010
+    destino: bronze.sr3010
+    chave: R_E_C_N_O_
+    # sem _STAMP_ — carga full. 3,7k linhas.
