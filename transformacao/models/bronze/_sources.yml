@@ -150,3 +150,43 @@ sources:
             tests: [unique, not_null]
       - name: sys_usr
         description: Usuarios do Protheus (comprador/solicitante).
+      - name: gu3010
+        description: Cadastro de transportador.
+        columns:
+          - name: r_e_c_n_o_
+            tests: [unique, not_null]
+      - name: gw1010
+        description: Documento de carga (romaneio).
+        columns:
+          - name: r_e_c_n_o_
+            tests: [unique, not_null]
+      - name: gw3010
+        description: Documento de frete (CT-e).
+        columns:
+          - name: r_e_c_n_o_
+            tests: [unique, not_null]
+      - name: gw4010
+        description: Item do documento de frete.
+        columns:
+          - name: r_e_c_n_o_
+            tests: [unique, not_null]
+      - name: gwd010
+        description: Ocorrencia de transporte.
+        columns:
+          - name: r_e_c_n_o_
+            tests: [unique, not_null]
+      - name: gwl010
+        description: Ocorrencia associada a documento de carga.
+        columns:
+          - name: r_e_c_n_o_
+            tests: [unique, not_null]
+      - name: gxg010
+        description: CT-e importado via EDI.
+        columns:
+          - name: r_e_c_n_o_
+            tests: [unique, not_null]
+      - name: gwm010
+        description: Rateio de frete por item de NF.
+        columns:
+          - name: r_e_c_n_o_
+            tests: [unique, not_null]

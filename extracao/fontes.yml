@@ -381,3 +381,56 @@ fontes:
     destino: bronze.sys_usr
     chave: R_E_C_N_O_
     # sem _STAMP_ — carga full, tabela pequena (253 linhas).
+
+  # ---------- Logistica (Fase 9) ----------
+  - nome: GU3010           # cadastro de transportador
+    tabela: GU3010
+    destino: bronze.gu3010
+    chave: R_E_C_N_O_
+    # sem _STAMP_ — carga full. 7,9k linhas.
+
+  - nome: GW1010           # documento de carga (romaneio)
+    tabela: GW1010
+    destino: bronze.gw1010
+    chave: R_E_C_N_O_
+    # sem _STAMP_ — carga full. 37k linhas.
+
+  - nome: GW3010           # documento de frete (CT-e)
+    tabela: GW3010
+    destino: bronze.gw3010
+    chave: R_E_C_N_O_
+    coluna_watermark: S_T_A_M_P_
+    tipo_watermark: timestamp
+    janela_movel_dias: 3
+
+  - nome: GW4010           # item do documento de frete
+    tabela: GW4010
+    destino: bronze.gw4010
+    chave: R_E_C_N_O_
+    # sem _STAMP_ — carga full. 35k linhas.
+
+  - nome: GWD010           # ocorrencia de transporte
+    tabela: GWD010
+    destino: bronze.gwd010
+    chave: R_E_C_N_O_
+    # sem _STAMP_ — carga full. 3k linhas.
+
+  - nome: GWL010           # ocorrencia x documento de carga
+    tabela: GWL010
+    destino: bronze.gwl010
+    chave: R_E_C_N_O_
+    # sem _STAMP_ — carga full. 4,6k linhas.
+
+  - nome: GXG010           # CT-e importado via EDI
+    tabela: GXG010
+    destino: bronze.gxg010
+    chave: R_E_C_N_O_
+    # sem _STAMP_ — carga full. 17k linhas.
+
+  - nome: GWM010           # rateio de frete por item de NF
+    tabela: GWM010
+    destino: bronze.gwm010
+    chave: R_E_C_N_O_
+    # sem _STAMP_ nem data de negocio confiavel — carga full. 131k
+    # linhas: e a fonte mais cara da Logistica sem watermark disponivel
+    # (mesma situacao do F2D010 na Fase 5).

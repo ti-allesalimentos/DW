@@ -593,6 +593,68 @@ models:
       - name: recno_origem
         tests: [unique, not_null]
 
+  - name: dim_transportador
+    description: Transportador conformado (GU3010).
+    columns:
+      - name: sk_transportador
+        tests: [unique, not_null]
+      - name: cod_transportador
+        tests: [unique, not_null]
+
+  - name: fato_cte_logistica
+    description: >
+      Fato CT-e, lado logistico — Protheus (GW3010).
+    columns:
+      - name: recno_origem
+        tests: [unique, not_null]
+
+  - name: fato_rateio_frete
+    description: >
+      Fato rateio de frete por item de NF — Protheus (GWM010).
+    columns:
+      - name: recno_origem
+        tests: [unique, not_null]
+
+  - name: fato_doc_frete
+    description: >
+      Fato documento de frete com ocorrencia de transporte —
+      Protheus (GW4010 + GU3/GW3/GW1/GWL/GWD/AC9). Grao documento x
+      anexo — um documento pode ter varios objetos anexados no AC9010.
+    columns:
+      - name: sk_doc_frete
+        tests: [unique, not_null]
+      - name: recno_origem
+        tests: [not_null]
+
+  - name: fato_edi_cte
+    description: >
+      Fato CT-e importado via EDI — Protheus (GXG010+GU3010).
+    columns:
+      - name: recno_origem
+        tests: [unique, not_null]
+
+  - name: fato_estoque_produto_acabado
+    description: >
+      Fato estoque de produto acabado por local — Protheus (SB2010).
+    columns:
+      - name: recno_origem
+        tests: [unique, not_null]
+
+  - name: fato_cte_financeiro
+    description: >
+      Fato CT-e, lado financeiro — Protheus (SE2010+SA2010).
+    columns:
+      - name: recno_origem
+        tests: [unique, not_null]
+
+  - name: fato_frete_entrada
+    description: >
+      Fato frete rateado em NF de entrada — Protheus (GWM010, tipo
+      doc '1'). Adiado da Fase 7 (Custo).
+    columns:
+      - name: sk_frete_entrada
+        tests: [unique, not_null]
+
   - name: fato_comissao
     description: >
       Fato comissao — Protheus (SE5010, baixa de titulo). Grao: evento

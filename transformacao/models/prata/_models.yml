@@ -440,3 +440,59 @@ models:
     columns:
       - name: recno_origem
         tests: [unique, not_null]
+
+  - name: stg_cte_logistica
+    description: >
+      CT-e, lado logistico (GW3010). Grao recno_origem.
+    columns:
+      - name: recno_origem
+        tests: [unique, not_null]
+
+  - name: stg_rateio_frete
+    description: >
+      Rateio de frete por item de NF (GWM010). Grao recno_origem.
+    columns:
+      - name: recno_origem
+        tests: [unique, not_null]
+
+  - name: stg_doc_frete
+    description: >
+      Documento de frete com ocorrencia de transporte (GW4010 +
+      GU3/GW3/GW1/GWL/GWD/AC9). Grao documento x anexo (recno_origem +
+      recno_ac9) — um documento pode ter varios objetos anexados.
+    columns:
+      - name: recno_origem
+        tests: [not_null]
+
+  - name: stg_edi_cte
+    description: >
+      CT-e importado via EDI (GXG010+GU3010). Grao recno_origem.
+      Corrige um bug do legado (UF origem usava o campo de UF
+      destino) — ver nota no modelo.
+    columns:
+      - name: recno_origem
+        tests: [unique, not_null]
+
+  - name: stg_estoque_produto_acabado
+    description: >
+      Estoque de produto acabado por local (SB2010, codigo 'PA').
+      Grao recno_origem.
+    columns:
+      - name: recno_origem
+        tests: [unique, not_null]
+
+  - name: stg_cte_financeiro
+    description: >
+      CT-e, lado financeiro — titulo a pagar de frete (SE2010+SA2010).
+      Grao recno_origem.
+    columns:
+      - name: recno_origem
+        tests: [unique, not_null]
+
+  - name: stg_frete_entrada
+    description: >
+      Frete rateado em NF de entrada (GWM010, tipo doc '1'), agregado.
+      Grao filial+nf+item+serie+fornecedor.
+    columns:
+      - name: filial
+        tests: [not_null]
