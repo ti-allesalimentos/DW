@@ -1,83 +1,137 @@
 /*
-  Agregado mensal de faturamento — grao: ano_mes x filial x familia x vendedor.
+  Agregado mensal de faturamento — grao: ano_mes x filial x sk_cliente x
+  sk_vendedor x sk_supervisor x familia.
 
-  Serve o portal do Oryon Board (area Faturamento & Comercial): a Visao
-  Executiva le agregados pra responder em milissegundos, igual ao padrao ja
-  usado no projeto Alimentare (ouro.agg_faturamento_mes_filial) — sem isso,
-  cada card do portal recalcularia o netting de devolucao linha a linha a
-  cada request.
+  Serve o portal do Oryon Board (area Faturamento & Comercial): todas as
+  medidas respondem a filtro/segmentacao por Vendedor, Supervisor, Cliente,
+  Familia, Filial e Estado (via join com dim_cliente em tempo de consulta)
+  sem recalcular nada linha a linha a cada request.
 
-  Venda Real = mesma regra canonica do resto do DW (Fase 12): total da nota
-  MENOS a devolucao vinculada pela NF de origem (join fato_faturamento x
-  fato_devolucoes por filial+nfe/nf_origem+item_nf/item_origem). Ver
-  memoria "fase12-decisoes-fonte-faturamento" — nao expor uma variante bruta
-  com nome parecido.
+  Faturamento Liquido ("Venda Real") = Bruto - Devolucao - Desconto
+  Comercial - Acordo Comercial (decisao de 29/09/2026 com o Lucas —
+  substitui a regra anterior de Bruto-Devolucao; ver
+  docs/reconciliacao_gp.md e memoria fase12-decisoes-fonte-faturamento,
+  que precisam ser atualizadas).
 
-  Margem fica de fora de proposito — decisao de escopo da Fase 12, ainda nao
-  ha custo real apurado pra sustentar isso.
+  Devolucao e Acordo Comercial sao bucketizados pela DATA DA PROPRIA NF
+  (de devolucao / de entrada do acordo), NAO a data da venda original —
+  outra decisao de 29/09 (antes ficavam no mes da venda original). Nenhum
+  dos dois carrega vendedor/supervisor no legado; ambos tem nf_origem/
+  item_origem apontando pra linha de venda exata, usado aqui pra resolver
+  as dimensoes (mesma tecnica ja usada pro netting de devolucao).
 */
 
-with fat as (
+with vendas as (
 
     select
-        f.recno_origem,
         f.filial,
         f.nfe,
-        f.item_nf,
         to_char(f.data_emissao, 'YYYY-MM') as ano_mes,
         f.sk_cliente,
         f.sk_vendedor,
+        f.sk_supervisor,
         coalesce(p.familia, 'SEM FAMILIA') as familia,
         f.total as valor,
+        f.valor_desconto_comercial,
         case when f.um = 'KG' then f.qtd else 0 end as kg
     from {{ ref('fato_faturamento') }} f
     left join {{ ref('dim_produto') }} p on p.sk_produto = f.sk_produto
 
 ),
 
-dev as (
+devolucoes as (
 
+    -- ano_mes pela data da PROPRIA devolucao; vendedor/supervisor/familia
+    -- vem da venda original (join por nf_origem/item_origem).
     select
+        to_char(d.data_emissao, 'YYYY-MM') as ano_mes,
         d.filial,
-        d.nf_origem as nfe,
-        d.item_origem as item_nf,
-        d.total as valor_dev,
-        case when d.um = 'KG' then d.qtd else 0 end as kg_dev
+        coalesce(vo.sk_cliente, d.sk_cliente) as sk_cliente,
+        vo.sk_vendedor,
+        vo.sk_supervisor,
+        coalesce(p.familia, 'SEM FAMILIA') as familia,
+        d.total as valor,
+        case when d.um = 'KG' then d.qtd else 0 end as kg
     from {{ ref('fato_devolucoes') }} d
+    left join {{ ref('fato_faturamento') }} vo
+        on vo.filial = d.filial and vo.nfe = d.nf_origem and vo.item_nf = d.item_origem
+    left join {{ ref('dim_produto') }} p on p.sk_produto = d.sk_produto
 
 ),
 
-liquido as (
+acordos as (
 
     select
-        fat.ano_mes,
-        fat.filial,
-        fat.familia,
-        fat.sk_vendedor,
-        fat.sk_cliente,
-        fat.nfe,
-        fat.valor                              as valor_bruto,
-        coalesce(dev.valor_dev, 0)             as valor_devolucao,
-        fat.valor - coalesce(dev.valor_dev, 0) as valor_liquido,
-        fat.kg - coalesce(dev.kg_dev, 0)       as kg_liquido
-    from fat
-    left join dev
-        on dev.filial = fat.filial
-       and dev.nfe = fat.nfe
-       and dev.item_nf = fat.item_nf
+        to_char(a.data_emissao, 'YYYY-MM') as ano_mes,
+        a.filial,
+        coalesce(vo.sk_cliente, a.sk_cliente) as sk_cliente,
+        vo.sk_vendedor,
+        vo.sk_supervisor,
+        coalesce(p.familia, 'SEM FAMILIA') as familia,
+        a.total as valor
+    from {{ ref('fato_acordo_comercial') }} a
+    left join {{ ref('fato_faturamento') }} vo
+        on vo.filial = a.filial and vo.nfe = a.nf_origem and vo.item_nf = a.item_origem
+    left join {{ ref('dim_produto') }} p on p.sk_produto = a.sk_produto
 
+),
+
+agg_vendas as (
+    select
+        ano_mes, filial, sk_cliente, sk_vendedor, sk_supervisor, familia,
+        count(distinct nfe)                              as qtd_notas,
+        round(sum(valor)::numeric, 2)                    as valor_bruto,
+        round(sum(kg)::numeric, 2)                       as kg_bruto,
+        round(sum(valor_desconto_comercial)::numeric, 2) as valor_desconto_comercial
+    from vendas
+    group by 1, 2, 3, 4, 5, 6
+),
+
+agg_dev as (
+    select
+        ano_mes, filial, sk_cliente, sk_vendedor, sk_supervisor, familia,
+        round(sum(valor)::numeric, 2) as valor_devolucao,
+        round(sum(kg)::numeric, 2)    as kg_devolvido
+    from devolucoes
+    group by 1, 2, 3, 4, 5, 6
+),
+
+agg_acordo as (
+    select
+        ano_mes, filial, sk_cliente, sk_vendedor, sk_supervisor, familia,
+        round(sum(valor)::numeric, 2) as valor_acordo_comercial
+    from acordos
+    group by 1, 2, 3, 4, 5, 6
 )
 
 select
-    ano_mes,
-    filial,
-    familia,
-    sk_vendedor,
-    count(distinct sk_cliente)                as qtd_clientes,
-    count(distinct nfe)                       as qtd_notas,
-    round(sum(valor_bruto)::numeric, 2)       as valor_bruto,
-    round(sum(valor_devolucao)::numeric, 2)   as valor_devolucao,
-    round(sum(valor_liquido)::numeric, 2)     as valor_liquido,
-    round(sum(kg_liquido)::numeric, 2)        as kg_liquido
-from liquido
-group by 1, 2, 3, 4
+    coalesce(v.ano_mes, d.ano_mes, a.ano_mes)                    as ano_mes,
+    coalesce(v.filial, d.filial, a.filial)                       as filial,
+    coalesce(v.sk_cliente, d.sk_cliente, a.sk_cliente)           as sk_cliente,
+    coalesce(v.sk_vendedor, d.sk_vendedor, a.sk_vendedor)        as sk_vendedor,
+    coalesce(v.sk_supervisor, d.sk_supervisor, a.sk_supervisor)  as sk_supervisor,
+    coalesce(v.familia, d.familia, a.familia)                    as familia,
+    coalesce(v.qtd_notas, 0)                                     as qtd_notas,
+    coalesce(v.valor_bruto, 0)                                   as valor_bruto,
+    coalesce(v.kg_bruto, 0)                                      as kg_bruto,
+    coalesce(v.valor_desconto_comercial, 0)                      as valor_desconto_comercial,
+    coalesce(d.valor_devolucao, 0)                                as valor_devolucao,
+    coalesce(d.kg_devolvido, 0)                                   as kg_devolvido,
+    coalesce(a.valor_acordo_comercial, 0)                         as valor_acordo_comercial,
+    coalesce(v.valor_bruto, 0) - coalesce(d.valor_devolucao, 0)
+        - coalesce(v.valor_desconto_comercial, 0) - coalesce(a.valor_acordo_comercial, 0)
+                                                                   as valor_liquido,
+    coalesce(v.kg_bruto, 0) - coalesce(d.kg_devolvido, 0)         as kg_liquido
+from agg_vendas v
+full outer join agg_dev d
+    on d.ano_mes = v.ano_mes and d.filial = v.filial and d.sk_cliente = v.sk_cliente
+   and d.sk_vendedor is not distinct from v.sk_vendedor
+   and d.sk_supervisor is not distinct from v.sk_supervisor
+   and d.familia = v.familia
+full outer join agg_acordo a
+    on a.ano_mes = coalesce(v.ano_mes, d.ano_mes)
+   and a.filial = coalesce(v.filial, d.filial)
+   and a.sk_cliente = coalesce(v.sk_cliente, d.sk_cliente)
+   and a.sk_vendedor is not distinct from coalesce(v.sk_vendedor, d.sk_vendedor)
+   and a.sk_supervisor is not distinct from coalesce(v.sk_supervisor, d.sk_supervisor)
+   and a.familia = coalesce(v.familia, d.familia)

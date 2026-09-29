@@ -11,6 +11,7 @@ select
     coalesce(dc.sk_cliente, {{ dbt_utils.generate_surrogate_key(["'NAO_IDENTIFICADO'"]) }}) as sk_cliente,
     coalesce(dp.sk_produto, {{ dbt_utils.generate_surrogate_key(["'NAO_IDENTIFICADO'"]) }}) as sk_produto,
     coalesce(dv.sk_vendedor, {{ dbt_utils.generate_surrogate_key(["'NAO_IDENTIFICADO'"]) }}) as sk_vendedor,
+    coalesce(dsup.sk_vendedor, {{ dbt_utils.generate_surrogate_key(["'NAO_IDENTIFICADO'"]) }}) as sk_supervisor,
     f.dt_emissao as data_emissao,
     f.filial,
     f.nfe,
@@ -27,8 +28,15 @@ select
     f.aliq_pis,
     f.aliq_cofins,
     f.aliq_icmsst,
+    f.cod_condpgto,
+    f.perc_desconto_condpgto,
+    f.perc_desconto_condespecial,
+    f.valor_desconto_comercial,
     f._carregado_em
 from {{ ref('stg_faturamento') }} f
 left join {{ ref('dim_cliente') }} dc on dc.chave_cliente = f.chave_cliente
 left join {{ ref('dim_produto') }} dp on dp.cod_produto = f.cod_produto
 left join {{ ref('dim_vendedor') }} dv on dv.cod_vendedor = f.cod_vendedor
+-- Supervisor e outro registro do mesmo cadastro de vendedores (SA3010) --
+-- o cliente carrega o codigo em A1_VEND3, resolvido pela mesma dim_vendedor.
+left join {{ ref('dim_vendedor') }} dsup on dsup.cod_vendedor = f.cod_supervisor

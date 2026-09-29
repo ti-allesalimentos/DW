@@ -79,21 +79,65 @@ itens_dedup as (
 
 sf2010_dedup as (
 
-    -- Cabecalho da nota: usado so pra identificar o tipo (bonificacao
-    -- exclui, ver nota no topo). Nao traz mais nada pra ca -- o resto do
-    -- cabecalho e escopo de outros fatos.
+    -- Cabecalho da nota: usado pra identificar o tipo (bonificacao exclui,
+    -- ver nota no topo) e como fallback da condicao de pagamento quando o
+    -- cliente nao tem uma fixa (ver cod_condpgto mais abaixo).
     select distinct on (filial, nfe)
-        filial, nfe, tipo_nf
+        filial, nfe, tipo_nf, cond_pgto_nf
     from (
         select
             {{ trim_protheus('f2_filial') }} as filial,
             {{ trim_protheus('f2_doc') }}    as nfe,
             {{ trim_protheus('f2_tipo') }}   as tipo_nf,
+            {{ trim_protheus('f2_cond') }}   as cond_pgto_nf,
             _carregado_em
         from {{ source('bronze', 'sf2010') }}
         where d_e_l_e_t_ <> '*'
     ) f2
     order by filial, nfe, _carregado_em desc
+
+),
+
+se4010_dedup as (
+
+    -- Desconto financeiro da condicao de pagamento (E4_DESCFIN) -- e o
+    -- "%DESCFIN" do Power BI: percentual aplicado sobre o valor da linha
+    -- conforme a condicao de pagamento do cliente (ou da nota, se o
+    -- cliente nao tiver uma condicao fixa -- ver cod_condpgto abaixo).
+    select distinct on (cod_condpgto)
+        cod_condpgto, perc_descfin
+    from (
+        select
+            {{ trim_protheus('e4_codigo') }}      as cod_condpgto,
+            coalesce(e4_descfin, 0) / 100.0        as perc_descfin,
+            _carregado_em
+        from {{ source('bronze', 'se4010') }}
+        where d_e_l_e_t_ <> '*'
+    ) e4
+    order by cod_condpgto, _carregado_em desc
+
+),
+
+sa3010_condespecial as (
+
+    -- A1_VEND1 do cadastro do cliente referencia um segundo SA3010 --
+    -- o "PF"/"BOLA" do negocio: um desconto/acordo especial por fora da
+    -- comissao normal de venda, hoje preenchido em pouquissimos clientes.
+    -- O codigo vem as vezes cru ("000008") e as vezes prefixado ("PF0018"
+    -- para o codigo 000018) -- normaliza-se pelo valor numerico antes de
+    -- casar com o cadastro, igual ao dedup de dim_vendedor.
+    select distinct on (cod_pf)
+        cod_pf, perc_condespecial
+    from (
+        select
+            btrim(a3_cod)::int             as cod_pf,
+            coalesce(a3_comis, 0) / 100.0  as perc_condespecial,
+            _carregado_em
+        from {{ source('bronze', 'sa3010') }}
+        where d_e_l_e_t_ <> '*'
+          and a3_cod ~ '^\d+$'
+    ) sa3
+    order by cod_pf, _carregado_em desc
 
 ),
 
@@ -121,7 +165,10 @@ sa1010_dedup as (
     select distinct on (cod_cliente, loja_cliente)
         {{ trim_protheus('a1_cod') }}  as cod_cliente,
         {{ trim_protheus('a1_loja') }} as loja_cliente,
-        {{ trim_protheus('a1_vend') }} as cod_vendedor
+        {{ trim_protheus('a1_vend') }} as cod_vendedor,
+        {{ trim_protheus('a1_vend3') }} as cod_supervisor,
+        {{ trim_protheus('a1_cond') }} as cond_pgto_cliente,
+        nullif(regexp_replace(btrim(a1_vend1), '\D', '', 'g'), '')::int as cod_pf
     from {{ source('bronze', 'sa1010') }}
     where d_e_l_e_t_ <> '*'
     order by cod_cliente, loja_cliente, _carregado_em desc
@@ -139,6 +186,7 @@ select
     c.cod_cliente,
     c.loja_cliente,
     sa1.cod_vendedor,
+    sa1.cod_supervisor,
     c.num_pedido,
     c.cfop,
     c.dt_emissao,
@@ -156,6 +204,17 @@ select
     c.aliq_pis,
     c.aliq_cofins,
     c.aliq_icmsst,
+    coalesce(nullif(sa1.cond_pgto_cliente, ''), sf2.cond_pgto_nf) as cod_condpgto,
+    coalesce(se4.perc_descfin, 0)                                as perc_desconto_condpgto,
+    coalesce(sa3pf.perc_condespecial, 0)                         as perc_desconto_condespecial,
+    -- Desconto comercial por linha: (%DESCFIN + %CONDESPECIAL) * TOTAL,
+    -- igual a "%DESCTOT" do Power BI. Aplicado sobre o bruto da linha, nao
+    -- sobre o liquido de devolucao (o Power BI aplica sobre "Total - Dev";
+    -- aqui a devolucao e tratada a parte, num join entre fatos -- ver
+    -- fato_faturamento_liquido). Diferenca esperada: imaterial, so afeta
+    -- linhas que foram vendidas E devolvidas dentro do mesmo recorte.
+    c.total * (coalesce(se4.perc_descfin, 0) + coalesce(sa3pf.perc_condespecial, 0))
+                                                                  as valor_desconto_comercial,
     c.recno_origem,
     c._carregado_em
 from com_conversao c
@@ -165,6 +224,10 @@ left join sa1010_dedup sa1
 join sf2010_dedup sf2
     on sf2.filial = c.filial
    and sf2.nfe = c.nfe
+left join se4010_dedup se4
+    on se4.cod_condpgto = coalesce(nullif(sa1.cond_pgto_cliente, ''), sf2.cond_pgto_nf)
+left join sa3010_condespecial sa3pf
+    on sa3pf.cod_pf = sa1.cod_pf
 where c.cfop in (select cfop from {{ ref('cfops_venda') }})
   and c.filial in (select filial from {{ ref('filiais_ativas') }})
   and c.cod_cliente not in (
