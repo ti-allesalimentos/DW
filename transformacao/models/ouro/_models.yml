@@ -1,6 +1,15 @@
 version: 2
 
 models:
+  - name: agg_faturamento_mes
+    description: >
+      Agregado mensal de Venda Real (liquida de devolucao) por filial,
+      familia e vendedor — serve o portal do Oryon Board (area Faturamento
+      & Comercial) sem recalcular o netting linha a linha a cada request.
+    columns:
+      - name: ano_mes
+        tests: [not_null]
+
   - name: dim_calendario
     description: >
       Dimensao calendario gerada por codigo, substitui o dCalendario.xlsx.

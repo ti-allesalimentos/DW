@@ -4,6 +4,14 @@
   (fGestaoPessoas.m), com duas colunas convertidas de texto pra
   numerico (o legado guarda percentual como string) — periculosidade
   e insalubridade sao valores calculaveis, nao rotulos.
+
+  Socios (matricula 1xxxxx) e PJ (9xxxxx) ficam de fora de proposito —
+  mesma exclusao ja validada no Oryon Board (modulos/bi/gp_extract.py):
+  sem ela o headcount conta ~9 pessoas a mais por mes. Eles entram por
+  cadastro manual (gp_colaboradores_manuais, fora do Protheus), nao por
+  aqui. fato_dupla_funcao/fato_historico_salarial fazem left join nesta
+  dimensao — uma linha de socio/PJ ali cai no NAO_IDENTIFICADO em vez de
+  perder a linha.
 */
 
 with funcionarios as (
@@ -11,6 +19,7 @@ with funcionarios as (
     select
         {{ trim_protheus('ra_filial') }}   as filial,
         {{ trim_protheus('ra_mat') }}      as matricula,
+        {{ trim_protheus('ra_cic') }}      as cpf,
         {{ trim_protheus('ra_nome') }}     as nome,
         {{ trim_protheus('ra_sexo') }}     as sexo,
         {{ data_protheus('ra_nasc') }}     as dt_nascimento,
@@ -31,6 +40,8 @@ with funcionarios as (
         _carregado_em
     from {{ source('bronze', 'sra010') }}
     where d_e_l_e_t_ <> '*'
+      and ra_mat not like '1%'
+      and ra_mat not like '9%'
 
 ),
 
@@ -47,6 +58,7 @@ select
     filial || matricula as chave_funcionario,
     filial,
     matricula,
+    cpf,
     nome,
     sexo,
     dt_nascimento,
@@ -65,5 +77,5 @@ union all
 
 select
     {{ dbt_utils.generate_surrogate_key(["'NAO_IDENTIFICADO'"]) }},
-    'NAO_IDENTIFICADO', null, null, 'Funcionário não identificado',
+    'NAO_IDENTIFICADO', null, null, null, 'Funcionário não identificado',
     null, null, null, null, null, null, null, null, null, null, null
