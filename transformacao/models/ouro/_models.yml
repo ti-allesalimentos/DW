@@ -10,6 +10,24 @@ models:
       - name: ano_mes
         tests: [not_null]
 
+  - name: agg_faturamento_cliente_mes
+    description: >
+      Agregado mensal de Venda Real por cliente — grao ano_mes x filial x
+      sk_cliente x familia. Serve a Analise Detalhada (ranking por
+      cliente), Positivacao e Carteira e Curva ABC e Mix do portal.
+    columns:
+      - name: ano_mes
+        tests: [not_null]
+
+  - name: agg_faturamento_produto_mes
+    description: >
+      Agregado mensal de Venda Real por produto — grao ano_mes x filial x
+      sk_produto. Serve a abertura por produto da Analise Detalhada do
+      portal.
+    columns:
+      - name: ano_mes
+        tests: [not_null]
+
   - name: dim_calendario
     description: >
       Dimensao calendario gerada por codigo, substitui o dCalendario.xlsx.
