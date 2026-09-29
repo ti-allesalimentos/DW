@@ -114,6 +114,22 @@ seeds:
       - name: uf
         tests: [unique, not_null]
 
+  - name: motivos_rescisao_rh
+    description: >
+      De-para RG_TIPORES (SRG010) -> descricao + classificacao Voluntario/
+      Involuntario. Replica o mapa fixo `MOTIVOS_RESCISAO` do Oryon Board
+      (modulos/bi/gp_turnover.py), ja validado contra a planilha do RH —
+      nao o `stg_motivo_rescisao` existente, que serve outro consumidor
+      (MOTIVORESCISAO.m, com valor pago via RCC010/SRR010). Codigo 18 nao
+      existe na tabela de parametros original; classificado como
+      INVOLUNTARIO por decisao do Lucas (termino de contrato de experiencia).
+    config:
+      column_types:
+        cod_motivo: varchar
+    columns:
+      - name: cod_motivo
+        tests: [unique, not_null]
+
   - name: destino
     description: "Destino da mercadoria (estoque, refaturamento, perda). Fonte: aba dDestino do fManual.xlsx."
     columns:
