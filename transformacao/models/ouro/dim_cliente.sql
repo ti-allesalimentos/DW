@@ -17,6 +17,7 @@ with clientes as (
         {{ trim_protheus('a1_mun') }}    as municipio,
         {{ trim_protheus('a1_cgc') }}    as cnpj,
         {{ trim_protheus('a1_vend') }}   as cod_vendedor,
+        {{ trim_protheus('a1_grpven') }} as cod_rede,
         _carregado_em
     from {{ source('bronze', 'sa1010') }}
     where d_e_l_e_t_ <> '*'
@@ -43,6 +44,7 @@ com_regiao as (
         d.municipio,
         d.cnpj,
         d.cod_vendedor,
+        d.cod_rede,
         r.regiao
     from dedup d
     left join {{ ref('regiao') }} r on r.uf = d.uf
@@ -51,20 +53,25 @@ com_regiao as (
 
     select
         'NAO_IDENTIFICADO', '', 'NAO_IDENTIFICADO',
-        'Cliente não identificado', null, null, null, null, null, null
+        'Cliente não identificado', null, null, null, null, null, null, null
 
 )
 
 select
-    {{ dbt_utils.generate_surrogate_key(['chave_cliente']) }} as sk_cliente,
-    chave_cliente,
-    cod_cliente,
-    loja_cliente,
-    nome,
-    nome_reduzido,
-    uf,
-    municipio,
-    cnpj,
-    cod_vendedor,
-    regiao
+    {{ dbt_utils.generate_surrogate_key(['com_regiao.chave_cliente']) }} as sk_cliente,
+    com_regiao.chave_cliente,
+    com_regiao.cod_cliente,
+    com_regiao.loja_cliente,
+    com_regiao.nome,
+    com_regiao.nome_reduzido,
+    com_regiao.uf,
+    com_regiao.municipio,
+    com_regiao.cnpj,
+    com_regiao.cod_vendedor,
+    com_regiao.regiao,
+    coalesce(rede.sk_rede, rede_ni.sk_rede)     as sk_rede,
+    coalesce(rede.cod_rede, 'NAO_IDENTIFICADO') as cod_rede,
+    coalesce(rede.nome_rede, rede_ni.nome_rede) as nome_rede
 from com_regiao
+left join {{ ref('dim_rede') }} rede on rede.cod_rede = com_regiao.cod_rede
+left join {{ ref('dim_rede') }} rede_ni on rede_ni.cod_rede = 'NAO_IDENTIFICADO'

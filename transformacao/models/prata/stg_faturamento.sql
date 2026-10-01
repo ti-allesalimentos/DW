@@ -156,6 +156,25 @@ com_conversao as (
 
 ),
 
+sc5010_dedup as (
+
+    -- Gerente (C5_VEND3) vem do pedido, nao do cliente -- diferente do
+    -- Supervisor (A1_VEND3, no cadastro do cliente, ver sa1010_dedup).
+    select distinct on (filial, num_pedido)
+        filial, num_pedido, cod_gerente
+    from (
+        select
+            {{ trim_protheus('c5_filial') }} as filial,
+            {{ trim_protheus('c5_num') }}    as num_pedido,
+            {{ trim_protheus('c5_vend3') }}  as cod_gerente,
+            _carregado_em
+        from {{ source('bronze', 'sc5010') }}
+        where d_e_l_e_t_ <> '*'
+    ) c5
+    order by filial, num_pedido, _carregado_em desc
+
+),
+
 sa1010_dedup as (
 
     -- O vendedor da nota nao vem do item (SD2 nao tem campo de vendedor);
@@ -215,6 +234,7 @@ select
     -- linhas que foram vendidas E devolvidas dentro do mesmo recorte.
     c.total * (coalesce(se4.perc_descfin, 0) + coalesce(sa3pf.perc_condespecial, 0))
                                                                   as valor_desconto_comercial,
+    sc5.cod_gerente,
     c.recno_origem,
     c._carregado_em
 from com_conversao c
@@ -228,6 +248,9 @@ left join se4010_dedup se4
     on se4.cod_condpgto = coalesce(nullif(sa1.cond_pgto_cliente, ''), sf2.cond_pgto_nf)
 left join sa3010_condespecial sa3pf
     on sa3pf.cod_pf = sa1.cod_pf
+left join sc5010_dedup sc5
+    on sc5.filial = c.filial
+   and sc5.num_pedido = c.num_pedido
 where c.cfop in (select cfop from {{ ref('cfops_venda') }})
   and c.filial in (select filial from {{ ref('filiais_ativas') }})
   and c.cod_cliente not in (

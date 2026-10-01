@@ -3,9 +3,12 @@ version: 2
 models:
   - name: agg_faturamento_mes
     description: >
-      Agregado mensal de Venda Real (liquida de devolucao) por filial,
-      familia e vendedor — serve o portal do Oryon Board (area Faturamento
-      & Comercial) sem recalcular o netting linha a linha a cada request.
+      Agregado mensal de Venda Real (liquida de devolucao) — grao ano_mes x
+      filial x sk_cliente x sk_vendedor x sk_supervisor x sk_gerente x
+      sk_produto x familia. Serve o portal do Oryon Board (area Faturamento
+      & Comercial) sem recalcular o netting linha a linha a cada request;
+      Rede/Regiao/Cidade/Estado resolvem via join com dim_cliente em tempo
+      de consulta (nao entram no grao pra nao inflar a cardinalidade).
     columns:
       - name: ano_mes
         tests: [not_null]
@@ -68,12 +71,31 @@ models:
   - name: dim_cliente
     description: >
       Cliente conformado (grao cod_cliente || loja), com regiao do seed
-      regiao via UF. Inclui membro "NAO_IDENTIFICADO" para os ~0,7% do
-      historico DATAVALE sem match de CNPJ contra o SA1010.
+      regiao via UF e rede (dim_rede) via A1_GRPVEN. Inclui membro
+      "NAO_IDENTIFICADO" para os ~0,7% do historico DATAVALE sem match de
+      CNPJ contra o SA1010 e para cliente sem rede cadastrada.
     columns:
       - name: sk_cliente
         tests: [unique, not_null]
       - name: chave_cliente
+        tests: [unique, not_null]
+      - name: sk_rede
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_rede')
+                field: sk_rede
+
+  - name: dim_rede
+    description: >
+      Rede (grupo de cliente) conformada — Protheus ACY010, grao cod_rede
+      (ACY_GRPVEN). Resolvida no cadastro do cliente via A1_GRPVEN (ver
+      dim_cliente). Inclui membro "NAO_IDENTIFICADO" para cliente sem rede.
+    columns:
+      - name: sk_rede
+        tests: [unique, not_null]
+      - name: cod_rede
         tests: [unique, not_null]
 
   - name: dim_vendedor

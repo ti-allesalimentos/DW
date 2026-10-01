@@ -545,3 +545,10 @@ fontes:
     destino: bronze.sr3010
     chave: R_E_C_N_O_
     # sem _STAMP_ — carga full. 3,7k linhas.
+
+  # ---------- Comercial (Fase 12 — Rede do cliente) ----------
+  - nome: ACY010           # cadastro de rede (grupo de cliente, A1_GRPVEN)
+    tabela: ACY010
+    destino: bronze.acy010
+    chave: R_E_C_N_O_
+    # sem _STAMP_ — carga full. 160 linhas.

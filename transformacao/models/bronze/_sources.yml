@@ -262,3 +262,8 @@ sources:
         columns:
           - name: r_e_c_n_o_
             tests: [unique, not_null]
+      - name: acy010
+        description: Cadastro de rede (grupo de cliente), referenciado pelo A1_GRPVEN do cliente.
+        columns:
+          - name: r_e_c_n_o_
+            tests: [unique, not_null]
