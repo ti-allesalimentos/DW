@@ -160,13 +160,20 @@ sc5010_dedup as (
 
     -- Gerente (C5_VEND3) vem do pedido, nao do cliente -- diferente do
     -- Supervisor (A1_VEND3, no cadastro do cliente, ver sa1010_dedup).
+    -- C5_COMIS1/C5_COMIS3 sao o % de comissao PREVISTO no pedido pro
+    -- vendedor (C5_VEND1) e pro gerente (C5_VEND3) -- previsibilidade,
+    -- nao a comissao efetivada (que so existe na baixa do titulo, em
+    -- fato_comissao, sem vinculo com NF/item -- decisao do Lucas, 01/10).
     select distinct on (filial, num_pedido)
-        filial, num_pedido, cod_gerente
+        filial, num_pedido, cod_gerente,
+        perc_comissao_vendedor, perc_comissao_gerente
     from (
         select
             {{ trim_protheus('c5_filial') }} as filial,
             {{ trim_protheus('c5_num') }}    as num_pedido,
             {{ trim_protheus('c5_vend3') }}  as cod_gerente,
+            coalesce(c5_comis1, 0) / 100.0   as perc_comissao_vendedor,
+            coalesce(c5_comis3, 0) / 100.0   as perc_comissao_gerente,
             _carregado_em
         from {{ source('bronze', 'sc5010') }}
         where d_e_l_e_t_ <> '*'
@@ -235,6 +242,8 @@ select
     c.total * (coalesce(se4.perc_descfin, 0) + coalesce(sa3pf.perc_condespecial, 0))
                                                                   as valor_desconto_comercial,
     sc5.cod_gerente,
+    sc5.perc_comissao_vendedor,
+    sc5.perc_comissao_gerente,
     c.recno_origem,
     c._carregado_em
 from com_conversao c

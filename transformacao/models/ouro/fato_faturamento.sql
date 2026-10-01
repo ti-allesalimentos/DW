@@ -33,6 +33,14 @@ select
     f.perc_desconto_condpgto,
     f.perc_desconto_condespecial,
     f.valor_desconto_comercial,
+    -- Comissao prevista no pedido (C5_COMIS1/C5_COMIS3), NAO a efetivada --
+    -- a comissao real so existe na baixa do titulo (fato_comissao), sem
+    -- vinculo com NF/item. Decisao do Lucas (01/10): usar a previsao do
+    -- pedido sobre o bruto da linha pra exibir na Analise Detalhada.
+    f.perc_comissao_vendedor,
+    f.total * f.perc_comissao_vendedor as vr_comissao_vendedor,
+    f.perc_comissao_gerente,
+    f.total * f.perc_comissao_gerente as vr_comissao_gerente,
     f._carregado_em
 from {{ ref('stg_faturamento') }} f
 left join {{ ref('dim_cliente') }} dc on dc.chave_cliente = f.chave_cliente
