@@ -44,6 +44,7 @@ with itens as (
         {{ trim_protheus('d2_cliente') }}  as cod_cliente,
         {{ trim_protheus('d2_loja') }}     as loja_cliente,
         {{ trim_protheus('d2_pedido') }}   as num_pedido,
+        {{ trim_protheus('d2_itempv') }}   as item_pedido,
         {{ trim_protheus('d2_cf') }}       as cfop,
         {{ trim_protheus('d2_um') }}       as um_origem,
         {{ data_protheus('d2_emissao') }}  as dt_emissao,
@@ -160,25 +161,71 @@ sc5010_dedup as (
 
     -- Gerente (C5_VEND3) vem do pedido, nao do cliente -- diferente do
     -- Supervisor (A1_VEND3, no cadastro do cliente, ver sa1010_dedup).
-    -- C5_COMIS1/C5_COMIS3 sao o % de comissao PREVISTO no pedido pro
-    -- vendedor (C5_VEND1) e pro gerente (C5_VEND3) -- previsibilidade,
-    -- nao a comissao efetivada (que so existe na baixa do titulo, em
-    -- fato_comissao, sem vinculo com NF/item -- decisao do Lucas, 01/10).
+    -- Campos de comissao do pedido (C5_COMIS1/2/3 e flags C5_X_COMI1/3) --
+    -- a cascata completa (item > pedido > cliente > cadastro) esta no
+    -- select final, ver nota la.
     select distinct on (filial, num_pedido)
-        filial, num_pedido, cod_gerente,
-        perc_comissao_vendedor, perc_comissao_gerente
+        filial, num_pedido, cod_gerente, cod_vendedor_pedido, cod_pf,
+        comis1, comis2, comis3, x_comi1, x_comi3
     from (
         select
             {{ trim_protheus('c5_filial') }} as filial,
             {{ trim_protheus('c5_num') }}    as num_pedido,
             {{ trim_protheus('c5_vend3') }}  as cod_gerente,
-            coalesce(c5_comis1, 0) / 100.0   as perc_comissao_vendedor,
-            coalesce(c5_comis3, 0) / 100.0   as perc_comissao_gerente,
+            {{ trim_protheus('c5_vend1') }}  as cod_vendedor_pedido,
+            {{ trim_protheus('c5_vend2') }}  as cod_pf,
+            coalesce(c5_comis1, 0)           as comis1,
+            coalesce(c5_comis2, 0)           as comis2,
+            coalesce(c5_comis3, 0)           as comis3,
+            {{ trim_protheus('c5_x_comi1') }} as x_comi1,
+            {{ trim_protheus('c5_x_comi3') }} as x_comi3,
             _carregado_em
         from {{ source('bronze', 'sc5010') }}
         where d_e_l_e_t_ <> '*'
     ) c5
     order by filial, num_pedido, _carregado_em desc
+
+),
+
+sc6010_dedup as (
+
+    -- Comissao no item do pedido de venda (C6_COMIS1/2/3) e flags "zera
+    -- comissao?" (C6_X_COMI1/3: 1 = nao, 2 = sim) -- primeiro nivel da
+    -- cascata de comissao.
+    select distinct on (filial, num_pedido, item_pedido)
+        filial, num_pedido, item_pedido, comis1, comis2, comis3, x_comi1, x_comi3
+    from (
+        select
+            {{ trim_protheus('c6_filial') }}  as filial,
+            {{ trim_protheus('c6_num') }}     as num_pedido,
+            {{ trim_protheus('c6_item') }}    as item_pedido,
+            coalesce(c6_comis1, 0)            as comis1,
+            coalesce(c6_comis2, 0)            as comis2,
+            coalesce(c6_comis3, 0)            as comis3,
+            {{ trim_protheus('c6_x_comi1') }} as x_comi1,
+            {{ trim_protheus('c6_x_comi3') }} as x_comi3,
+            _carregado_em
+        from {{ source('bronze', 'sc6010') }}
+        where d_e_l_e_t_ <> '*'
+    ) c6
+    order by filial, num_pedido, item_pedido, _carregado_em desc
+
+),
+
+sa3010_comis as (
+
+    -- Comissao padrao do cadastro de vendedores (A3_COMIS) -- ultimo nivel
+    -- da cascata, vale pra vendedor, gerente e PF.
+    select distinct on (cod_vendedor) cod_vendedor, perc_a3
+    from (
+        select
+            {{ trim_protheus('a3_cod') }} as cod_vendedor,
+            coalesce(a3_comis, 0)         as perc_a3,
+            _carregado_em
+        from {{ source('bronze', 'sa3010') }}
+        where d_e_l_e_t_ <> '*'
+    ) a3
+    order by cod_vendedor, _carregado_em desc
 
 ),
 
@@ -194,6 +241,8 @@ sa1010_dedup as (
         {{ trim_protheus('a1_vend') }} as cod_vendedor,
         {{ trim_protheus('a1_vend3') }} as cod_supervisor,
         {{ trim_protheus('a1_cond') }} as cond_pgto_cliente,
+        coalesce(a1_comis, 0)          as comis_cliente,
+        coalesce(a1_comis3, 0)         as comis3_cliente,
         nullif(regexp_replace(btrim(a1_vend1), '\D', '', 'g'), '')::int as cod_pf
     from {{ source('bronze', 'sa1010') }}
     where d_e_l_e_t_ <> '*'
@@ -212,7 +261,9 @@ select
     c.cod_cliente,
     c.loja_cliente,
     sa1.cod_vendedor,
-    sa1.cod_supervisor,
+    -- Supervisor e Gerente sao o mesmo papel (decisao do Lucas, 05/10):
+    -- C5_VEND3 do pedido, com A1_VEND3 do cliente como fallback.
+    coalesce(sc5.cod_gerente, sa1.cod_supervisor)       as cod_supervisor,
     c.num_pedido,
     c.cfop,
     c.dt_emissao,
@@ -241,9 +292,23 @@ select
     -- linhas que foram vendidas E devolvidas dentro do mesmo recorte.
     c.total * (coalesce(se4.perc_descfin, 0) + coalesce(sa3pf.perc_condespecial, 0))
                                                                   as valor_desconto_comercial,
-    sc5.cod_gerente,
-    sc5.perc_comissao_vendedor,
-    sc5.perc_comissao_gerente,
+    coalesce(sc5.cod_gerente, sa1.cod_supervisor)       as cod_gerente,
+    -- Comissao PREVISTA (nao a efetivada, que vem da baixa do titulo em
+    -- fato_comissao), pela hierarquia do Protheus (Lucas, 05/10):
+    --   1. item do pedido (SC6): C6_X_COMI = 2 zera o item; senao C6_COMIS > 0
+    --   2. pedido (SC5): C5_X_COMI = 2 zera o pedido; senao C5_COMIS > 0
+    --   3. cliente (SA1): A1_COMIS (vendedor) / A1_COMIS3 (gerente)
+    --   4. cadastro do vendedor (SA3): A3_COMIS; 0 zera.
+    -- Flag em branco conta como "1" (nao zera). Vendedor = C5_VEND1 com
+    -- A1_VEND de fallback; gerente = C5_VEND3 com A1_VEND3; PF = C5_VEND2
+    -- (percentual em COMIS2; nao ha flag X_COMI nem campo no cliente).
+    coalesce(sc5.cod_vendedor_pedido, sa1.cod_vendedor) as cod_vendedor_comissao,
+    sc5.cod_pf,
+    cm.perc_vendedor                                    as perc_comissao_vendedor,
+    cm.origem_vendedor                                  as origem_comissao_vendedor,
+    cm.perc_gerente                                     as perc_comissao_gerente,
+    cm.origem_gerente                                   as origem_comissao_gerente,
+    cm.perc_pf                                          as perc_comissao_pf,
     c.recno_origem,
     c._carregado_em
 from com_conversao c
@@ -260,6 +325,59 @@ left join sa3010_condespecial sa3pf
 left join sc5010_dedup sc5
     on sc5.filial = c.filial
    and sc5.num_pedido = c.num_pedido
+left join sc6010_dedup sc6
+    on sc6.filial = c.filial
+   and sc6.num_pedido = c.num_pedido
+   and sc6.item_pedido = c.item_pedido
+left join sa3010_comis sa3_v
+    on sa3_v.cod_vendedor = coalesce(sc5.cod_vendedor_pedido, sa1.cod_vendedor)
+left join sa3010_comis sa3_g
+    on sa3_g.cod_vendedor = coalesce(sc5.cod_gerente, sa1.cod_supervisor)
+left join sa3010_comis sa3_p
+    on sa3_p.cod_vendedor = sc5.cod_pf
+cross join lateral (
+    select
+        case
+            when sc6.x_comi1 = '2' then 0
+            when sc6.comis1 > 0 then sc6.comis1
+            when sc5.x_comi1 = '2' then 0
+            when sc5.comis1 > 0 then sc5.comis1
+            when sa1.comis_cliente > 0 then sa1.comis_cliente
+            else coalesce(sa3_v.perc_a3, 0)
+        end / 100.0 as perc_vendedor,
+        case
+            when sc6.x_comi1 = '2' then 'item zerado'
+            when sc6.comis1 > 0 then 'item'
+            when sc5.x_comi1 = '2' then 'pedido zerado'
+            when sc5.comis1 > 0 then 'pedido'
+            when sa1.comis_cliente > 0 then 'cliente'
+            when coalesce(sa3_v.perc_a3, 0) > 0 then 'cadastro'
+            else 'sem comissao'
+        end as origem_vendedor,
+        case
+            when sc6.x_comi3 = '2' then 0
+            when sc6.comis3 > 0 then sc6.comis3
+            when sc5.x_comi3 = '2' then 0
+            when sc5.comis3 > 0 then sc5.comis3
+            when sa1.comis3_cliente > 0 then sa1.comis3_cliente
+            else coalesce(sa3_g.perc_a3, 0)
+        end / 100.0 as perc_gerente,
+        case
+            when sc6.x_comi3 = '2' then 'item zerado'
+            when sc6.comis3 > 0 then 'item'
+            when sc5.x_comi3 = '2' then 'pedido zerado'
+            when sc5.comis3 > 0 then 'pedido'
+            when sa1.comis3_cliente > 0 then 'cliente'
+            when coalesce(sa3_g.perc_a3, 0) > 0 then 'cadastro'
+            else 'sem comissao'
+        end as origem_gerente,
+        case
+            when sc5.cod_pf is null then 0
+            when sc6.comis2 > 0 then sc6.comis2
+            when sc5.comis2 > 0 then sc5.comis2
+            else coalesce(sa3_p.perc_a3, 0)
+        end / 100.0 as perc_pf
+) cm
 where c.cfop in (select cfop from {{ ref('cfops_venda') }})
   and c.filial in (select filial from {{ ref('filiais_ativas') }})
   and c.cod_cliente not in (
