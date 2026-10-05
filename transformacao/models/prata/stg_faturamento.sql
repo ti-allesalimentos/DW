@@ -260,7 +260,9 @@ select
     c.cod_cliente || c.loja_cliente                     as chave_cliente,
     c.cod_cliente,
     c.loja_cliente,
-    sa1.cod_vendedor,
+    -- Vendedor: C5_VEND1 do pedido, com A1_VEND do cliente de fallback
+    -- (Lucas, 05/10) -- antes era so A1_VEND, igual a query legada.
+    coalesce(sc5.cod_vendedor_pedido, sa1.cod_vendedor) as cod_vendedor,
     -- Supervisor e Gerente sao o mesmo papel (decisao do Lucas, 05/10):
     -- C5_VEND3 do pedido, com A1_VEND3 do cliente como fallback.
     coalesce(sc5.cod_gerente, sa1.cod_supervisor)       as cod_supervisor,
