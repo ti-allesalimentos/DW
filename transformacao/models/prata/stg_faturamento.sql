@@ -159,18 +159,23 @@ com_conversao as (
 
 sc5010_dedup as (
 
+    -- Tabela de preco atribuida ao pedido (C5_TABELA) -- e o "TABPRECO" do
+    -- Power BI. Nao existe uma tabela unica: sao 40+ tabelas nomeadas por
+    -- rede/cliente negociado (ver dim_tabela_preco), cada pedido carrega a
+    -- sua propria.
     -- Gerente (C5_VEND3) vem do pedido, nao do cliente -- diferente do
     -- Supervisor (A1_VEND3, no cadastro do cliente, ver sa1010_dedup).
     -- Campos de comissao do pedido (C5_COMIS1/2/3 e flags C5_X_COMI1/3) --
     -- a cascata completa (item > pedido > cliente > cadastro) esta no
     -- select final, ver nota la.
     select distinct on (filial, num_pedido)
-        filial, num_pedido, cod_gerente, cod_vendedor_pedido, cod_pf,
+        filial, num_pedido, cod_tabela_pedido, cod_gerente, cod_vendedor_pedido, cod_pf,
         comis1, comis2, comis3, x_comi1, x_comi3
     from (
         select
             {{ trim_protheus('c5_filial') }} as filial,
             {{ trim_protheus('c5_num') }}    as num_pedido,
+            {{ trim_protheus('c5_tabela') }} as cod_tabela_pedido,
             {{ trim_protheus('c5_vend3') }}  as cod_gerente,
             {{ trim_protheus('c5_vend1') }}  as cod_vendedor_pedido,
             {{ trim_protheus('c5_vend2') }}  as cod_pf,
@@ -294,6 +299,7 @@ select
     -- linhas que foram vendidas E devolvidas dentro do mesmo recorte.
     c.total * (coalesce(se4.perc_descfin, 0) + coalesce(sa3pf.perc_condespecial, 0))
                                                                   as valor_desconto_comercial,
+    sc5.cod_tabela_pedido,
     coalesce(sc5.cod_gerente, sa1.cod_supervisor)       as cod_gerente,
     -- Comissao PREVISTA (nao a efetivada, que vem da baixa do titulo em
     -- fato_comissao), pela hierarquia do Protheus (Lucas, 05/10):

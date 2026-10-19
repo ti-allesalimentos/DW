@@ -49,6 +49,13 @@ select
     f.origem_comissao_gerente,
     f.perc_comissao_pf,
     f.total * f.perc_comissao_pf as vr_comissao_pf,
+    f.cod_tabela_pedido,
+    coalesce(dtp_uf.preco_unit, dtp_geral.preco_unit) as preco_tabela,
+    f.preco_unit - coalesce(dtp_uf.preco_unit, dtp_geral.preco_unit) as desvio_preco_valor,
+    case when coalesce(dtp_uf.preco_unit, dtp_geral.preco_unit) > 0
+         then (f.preco_unit - coalesce(dtp_uf.preco_unit, dtp_geral.preco_unit))
+              / coalesce(dtp_uf.preco_unit, dtp_geral.preco_unit)
+    end as desvio_preco_pct,
     f._carregado_em
 from {{ ref('stg_faturamento') }} f
 left join {{ ref('dim_cliente') }} dc on dc.chave_cliente = f.chave_cliente
@@ -62,3 +69,20 @@ left join {{ ref('dim_vendedor') }} dsup on dsup.cod_vendedor = f.cod_supervisor
 left join {{ ref('dim_vendedor') }} dger on dger.cod_vendedor = f.cod_gerente
 left join {{ ref('dim_vendedor') }} dvc on dvc.cod_vendedor = f.cod_vendedor_comissao
 left join {{ ref('dim_vendedor') }} dpf on dpf.cod_vendedor = f.cod_pf
+-- DA0010/DA1010 usam uma filial "matriz" de 2 digitos (01-04), mais grossa
+-- que a filial de venda do SD2010 (01001, 01003...) -- left() reproduz o
+-- agrupamento. A tabela de preco so tem linha por UF quando o preco muda
+-- naquele estado (742 de 803 combinacoes filial+tabela+produto tem so a
+-- linha "geral", UF em branco) -- por isso o fallback: tenta a linha do
+-- UF do cliente primeiro, cai pra geral se nao existir. Sem isso o match
+-- ficava em 41% em vez de 95,5%.
+left join {{ ref('dim_tabela_preco') }} dtp_uf
+    on dtp_uf.filial = left(f.filial, 2)
+   and dtp_uf.cod_tabela = f.cod_tabela_pedido
+   and dtp_uf.sk_produto = dp.sk_produto
+   and dtp_uf.uf = dc.uf
+left join {{ ref('dim_tabela_preco') }} dtp_geral
+    on dtp_geral.filial = left(f.filial, 2)
+   and dtp_geral.cod_tabela = f.cod_tabela_pedido
+   and dtp_geral.sk_produto = dp.sk_produto
+   and (dtp_geral.uf is null or dtp_geral.uf = '')
