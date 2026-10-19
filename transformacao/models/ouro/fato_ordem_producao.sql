@@ -1,3 +1,11 @@
+{{
+  config(
+    indexes=[
+      {'columns': ['recno_origem'], 'unique': True},
+    ]
+  )
+}}
+
 /*
   Fato ordem de producao — Protheus (SC2010). Grao: recno_origem.
 */

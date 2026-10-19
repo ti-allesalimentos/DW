@@ -1,3 +1,11 @@
+{{
+  config(
+    indexes=[
+      {'columns': ['recno_origem'], 'unique': True},
+    ]
+  )
+}}
+
 /*
   Fato pedido de compra — Protheus (SC7010). Grao: recno_origem.
 */

@@ -1,3 +1,11 @@
+{{
+  config(
+    indexes=[
+      {'columns': ['recno_origem'], 'unique': True},
+    ]
+  )
+}}
+
 /*
   Fato rateio de titulo por multiplas naturezas — Protheus (SEV010).
   Grao: recno_origem. cod_clifor nao e resolvido contra dim_cliente/

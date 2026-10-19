@@ -1,3 +1,11 @@
+{{
+  config(
+    indexes=[
+      {'columns': ['recno_origem'], 'unique': True},
+    ]
+  )
+}}
+
 /*
   Fato lancamento de estoque indireto (nao ligado a OP) — Protheus
   (SD3010, TM=505). Grao: recno_origem.

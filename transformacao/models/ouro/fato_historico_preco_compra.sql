@@ -1,3 +1,11 @@
+{{
+  config(
+    indexes=[
+      {'columns': ['recno_origem'], 'unique': True},
+    ]
+  )
+}}
+
 /*
   Fato historico de preco de compra por produto — Protheus (SC7010).
   Grao: recno_origem.

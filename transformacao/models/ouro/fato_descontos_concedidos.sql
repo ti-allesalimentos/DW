@@ -1,3 +1,11 @@
+{{
+  config(
+    indexes=[
+      {'columns': ['recno_origem'], 'unique': True},
+    ]
+  )
+}}
+
 /*
   Fato descontos concedidos a clientes — Protheus (SE1010).
   Grao: recno_origem.

@@ -1,3 +1,11 @@
+{{
+  config(
+    indexes=[
+      {'columns': ['recno_origem'], 'unique': True},
+    ]
+  )
+}}
+
 /*
   Fato reprocesso de producao — Protheus (SD3010, TM=200). Grao:
   recno_origem. cod_produto_pai identifica a ordem de producao

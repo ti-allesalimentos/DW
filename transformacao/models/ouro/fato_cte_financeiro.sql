@@ -1,3 +1,11 @@
+{{
+  config(
+    indexes=[
+      {'columns': ['recno_origem'], 'unique': True},
+    ]
+  )
+}}
+
 /*
   Fato CT-e, lado financeiro — Protheus (SE2010+SA2010). Grao:
   recno_origem.

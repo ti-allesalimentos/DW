@@ -1,3 +1,11 @@
+{{
+  config(
+    indexes=[
+      {'columns': ['recno_origem'], 'unique': True},
+    ]
+  )
+}}
+
 /*
   Fato CT-e importado via EDI — Protheus (GXG010+GU3010). Grao:
   recno_origem.

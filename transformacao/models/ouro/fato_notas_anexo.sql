@@ -1,3 +1,11 @@
+{{
+  config(
+    indexes=[
+      {'columns': ['recno_origem'], 'unique': True},
+    ]
+  )
+}}
+
 /*
   Fato NF de entrada x anexo digitalizado — Protheus (SF1010 x AC9010).
   Grao: recno_origem. `tem_anexo = false` da a lista de "sem anexo"

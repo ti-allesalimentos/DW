@@ -1,3 +1,11 @@
+{{
+  config(
+    indexes=[
+      {'columns': ['recno_origem'], 'unique': True},
+    ]
+  )
+}}
+
 /*
   Fato saldo inicial de estoque — Protheus (SB9010). Grao: recno_origem.
 */

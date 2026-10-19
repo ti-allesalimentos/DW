@@ -1,3 +1,11 @@
+{{
+  config(
+    indexes=[
+      {'columns': ['recno_origem'], 'unique': True},
+    ]
+  )
+}}
+
 /*
   Fato movimento bancario de NCC — Protheus (SE5010, tipo 'NCC').
   Grao: recno_origem.

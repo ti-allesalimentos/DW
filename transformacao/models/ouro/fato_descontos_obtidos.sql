@@ -1,3 +1,11 @@
+{{
+  config(
+    indexes=[
+      {'columns': ['recno_origem'], 'unique': True},
+    ]
+  )
+}}
+
 /*
   Fato descontos obtidos de fornecedores — Protheus (SE2010).
   Grao: recno_origem.

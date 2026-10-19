@@ -1,3 +1,11 @@
+{{
+  config(
+    indexes=[
+      {'columns': ['recno_origem'], 'unique': True},
+    ]
+  )
+}}
+
 /*
   Fato rescisao (RH) — Protheus (SRG010), classificado
   Voluntario/Involuntario. Grao: recno_origem.

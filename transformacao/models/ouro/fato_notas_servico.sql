@@ -1,3 +1,11 @@
+{{
+  config(
+    indexes=[
+      {'columns': ['recno_origem'], 'unique': True},
+    ]
+  )
+}}
+
 /*
   Fato notas fiscais de servico — Protheus (SF1010, especie 'NFS').
   Grao: recno_origem.

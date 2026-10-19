@@ -1,3 +1,11 @@
+{{
+  config(
+    indexes=[
+      {'columns': ['recno_origem'], 'unique': True},
+    ]
+  )
+}}
+
 /*
   Fato estoque de produto acabado por local — Protheus (SB2010).
   Grao: recno_origem.

@@ -1,3 +1,11 @@
+{{
+  config(
+    indexes=[
+      {'columns': ['recno_origem'], 'unique': True},
+    ]
+  )
+}}
+
 /*
   Fato itens de NF de entrada pra custeio — Protheus (SF1010+SD1010,
   tipo N/C). Grao: recno_origem.

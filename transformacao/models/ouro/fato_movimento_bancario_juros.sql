@@ -1,3 +1,11 @@
+{{
+  config(
+    indexes=[
+      {'columns': ['recno_origem'], 'unique': True},
+    ]
+  )
+}}
+
 /*
   Fato movimento bancario de juros/antecipacao — Protheus (SE5010,
   motivo 'DEB'). Grao: recno_origem.

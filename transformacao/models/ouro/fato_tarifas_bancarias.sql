@@ -1,3 +1,11 @@
+{{
+  config(
+    indexes=[
+      {'columns': ['recno_origem'], 'unique': True},
+    ]
+  )
+}}
+
 /*
   Fato tarifas bancarias — Protheus (SE5010, naturezas de
   tarifa/IOF/juros de aplicacao). Grao: recno_origem.

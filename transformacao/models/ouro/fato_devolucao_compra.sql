@@ -1,3 +1,11 @@
+{{
+  config(
+    indexes=[
+      {'columns': ['recno_origem'], 'unique': True},
+    ]
+  )
+}}
+
 /*
   Fato devolucao em nota de entrada — Protheus (SF1010+SD1010, tipo
   'D'). Grao: recno_origem.

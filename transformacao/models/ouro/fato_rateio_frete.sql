@@ -1,3 +1,11 @@
+{{
+  config(
+    indexes=[
+      {'columns': ['recno_origem'], 'unique': True},
+    ]
+  )
+}}
+
 /*
   Fato rateio de frete por item de NF — Protheus (GWM010).
   Grao: recno_origem.

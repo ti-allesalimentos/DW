@@ -1,3 +1,11 @@
+{{
+  config(
+    indexes=[
+      {'columns': ['recno_origem'], 'unique': True},
+    ]
+  )
+}}
+
 /*
   Fato CT-e, lado logistico — Protheus (GW3010). Grao: recno_origem.
 */

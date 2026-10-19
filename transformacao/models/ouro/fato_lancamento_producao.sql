@@ -1,3 +1,11 @@
+{{
+  config(
+    indexes=[
+      {'columns': ['recno_origem'], 'unique': True},
+    ]
+  )
+}}
+
 /*
   Fato lancamento de estoque em producao (massa/insumos) — Protheus
   (SD3010). Grao: recno_origem.

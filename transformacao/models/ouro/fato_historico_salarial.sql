@@ -1,3 +1,11 @@
+{{
+  config(
+    indexes=[
+      {'columns': ['recno_origem'], 'unique': True},
+    ]
+  )
+}}
+
 /*
   Fato historico de alteracao de salario base — Protheus (SR3010).
   Grao: recno_origem.
