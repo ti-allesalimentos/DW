@@ -1,5 +1,8 @@
 {{
   config(
+    materialized='incremental',
+    incremental_strategy='append',
+    pre_hook="{% if is_incremental() %}delete from {{ this }} where data_emissao >= current_date - interval '60 days'{% endif %}",
     indexes=[
       {'columns': ['data_emissao']},
       {'columns': ['sk_cliente']},
@@ -12,6 +15,13 @@
 
 /*
   Fato faturamento — Protheus (SD2010), grao: item de nota fiscal de saida.
+
+  INCREMENTAL (estrategia B — ver docs/arquitetura_performance.md §5):
+  o pre_hook apaga os ultimos 60 dias (>= a janela de 45d do extrator) e o
+  SELECT abaixo reinsere so esse periodo. Absorve updates E cancelamentos
+  (linhas que sumiram do prata por D_E_L_E_T_='*'). O corte usa current_date
+  nos dois lados (estavel, nao depende do estado da propria tabela). Fora da
+  janela, imutavel. Primeira carga / --full-refresh e full.
 
   Junta stg_faturamento as dimensoes conformadas por chave de negocio e
   resolve pra "nao identificado" quando a chave nao aparece na dimensao
@@ -98,3 +108,8 @@ left join {{ ref('dim_tabela_preco') }} dtp_geral
    and dtp_geral.cod_tabela = f.cod_tabela_pedido
    and dtp_geral.sk_produto = dp.sk_produto
    and (dtp_geral.uf is null or dtp_geral.uf = '')
+
+{% if is_incremental() %}
+-- So a janela movel recente (o pre_hook ja apagou esse mesmo periodo).
+where f.dt_emissao >= current_date - interval '60 days'
+{% endif %}
