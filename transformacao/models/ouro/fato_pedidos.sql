@@ -1,3 +1,11 @@
+{{
+  config(
+    indexes=[
+      {'columns': ['recno_origem'], 'unique': True},
+    ]
+  )
+}}
+
 /*
   Fato pedidos — Protheus (SC9010, liberacao/embarque). Grao: pedido +
   cliente + produto + item + sequencia.

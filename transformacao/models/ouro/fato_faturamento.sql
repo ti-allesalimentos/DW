@@ -1,3 +1,15 @@
+{{
+  config(
+    indexes=[
+      {'columns': ['data_emissao']},
+      {'columns': ['sk_cliente']},
+      {'columns': ['sk_produto']},
+      {'columns': ['sk_vendedor']},
+      {'columns': ['recno_origem'], 'unique': True},
+    ]
+  )
+}}
+
 /*
   Fato faturamento — Protheus (SD2010), grao: item de nota fiscal de saida.
 

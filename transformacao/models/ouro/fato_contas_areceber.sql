@@ -1,3 +1,15 @@
+{{
+  config(
+    indexes=[
+      {'columns': ['data_emissao']},
+      {'columns': ['data_vencimento']},
+      {'columns': ['sk_natureza']},
+      {'columns': ['sk_cliente']},
+      {'columns': ['recno_origem'], 'unique': True},
+    ]
+  )
+}}
+
 /*
   Fato contas a receber — Protheus (SE1010). Grao: titulo/parcela.
   Universo inteiro (aberto + baixado); quem consumir e que filtra saldo.

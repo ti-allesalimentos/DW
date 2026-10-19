@@ -1,3 +1,14 @@
+{{
+  config(
+    indexes=[
+      {'columns': ['data_emissao']},
+      {'columns': ['sk_cliente']},
+      {'columns': ['sk_produto']},
+      {'columns': ['recno_origem'], 'unique': True},
+    ]
+  )
+}}
+
 /*
   Fato devolucoes — Protheus (SD1010). Grao: item de nota fiscal de
   entrada por devolucao de venda.

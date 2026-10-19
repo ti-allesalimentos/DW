@@ -1,3 +1,12 @@
+{{
+  config(
+    indexes=[
+      {'columns': ['ano_mes']},
+      {'columns': ['sk_cliente']},
+    ]
+  )
+}}
+
 /*
   Agregado mensal de faturamento por cliente — grao: ano_mes x filial x
   sk_cliente x familia.

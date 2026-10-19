@@ -1,3 +1,12 @@
+{{
+  config(
+    indexes=[
+      {'columns': ['sk_natureza'], 'unique': True},
+      {'columns': ['cod_natureza']},
+    ]
+  )
+}}
+
 /*
   Dimensao natureza financeira, conformada. Grao: cod_natureza (SED010,
   ED_CODIGO). Usada por contas a receber, contas a pagar e movimento

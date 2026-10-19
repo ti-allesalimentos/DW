@@ -1,3 +1,15 @@
+{{
+  config(
+    indexes=[
+      {'columns': ['data_emissao']},
+      {'columns': ['data_vencimento_real']},
+      {'columns': ['sk_natureza']},
+      {'columns': ['sk_fornecedor']},
+      {'columns': ['recno_origem'], 'unique': True},
+    ]
+  )
+}}
+
 /*
   Fato contas a pagar — Protheus (SE2010). Grao: titulo/parcela. Exclui
   tipos FT/NDF/PA/PRE (ver nota em stg_contas_apagar.sql).

@@ -1,3 +1,12 @@
+{{
+  config(
+    indexes=[
+      {'columns': ['sk_produto'], 'unique': True},
+      {'columns': ['cod_produto']},
+    ]
+  )
+}}
+
 /*
   Dimensao produto, conformada. Grao: cod_produto ja resolvido pelo
   de-para caixa->quilo (o mesmo codigo usado em stg_faturamento).

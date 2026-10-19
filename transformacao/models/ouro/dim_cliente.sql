@@ -1,3 +1,12 @@
+{{
+  config(
+    indexes=[
+      {'columns': ['sk_cliente'], 'unique': True},
+      {'columns': ['cod_cliente', 'loja_cliente']},
+    ]
+  )
+}}
+
 /*
   Dimensao cliente, conformada. Grao: chave_cliente (cod_cliente || loja).
 

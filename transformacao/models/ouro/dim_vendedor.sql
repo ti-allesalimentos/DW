@@ -1,3 +1,12 @@
+{{
+  config(
+    indexes=[
+      {'columns': ['sk_vendedor'], 'unique': True},
+      {'columns': ['cod_vendedor']},
+    ]
+  )
+}}
+
 /*
   Dimensao vendedor, conformada. Grao: cod_vendedor.
 

@@ -1,3 +1,12 @@
+{{
+  config(
+    indexes=[
+      {'columns': ['ano_mes']},
+      {'columns': ['sk_produto']},
+    ]
+  )
+}}
+
 /*
   Agregado mensal de faturamento por produto — grao: ano_mes x filial x
   sk_produto.

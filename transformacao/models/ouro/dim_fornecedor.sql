@@ -1,3 +1,12 @@
+{{
+  config(
+    indexes=[
+      {'columns': ['sk_fornecedor'], 'unique': True},
+      {'columns': ['cod_fornecedor', 'loja_fornecedor']},
+    ]
+  )
+}}
+
 /*
   Dimensao fornecedor, conformada. Grao: chave_fornecedor (cod_fornecedor
   || loja). Espelha dim_cliente — mesmo SA2010, mesma logica de

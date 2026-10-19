@@ -1,3 +1,11 @@
+{{
+  config(
+    indexes=[
+      {'columns': ['recno_origem'], 'unique': True},
+    ]
+  )
+}}
+
 /*
   Fato apontamento de producao — Protheus (SH6010). Grao: recno_origem.
 */
