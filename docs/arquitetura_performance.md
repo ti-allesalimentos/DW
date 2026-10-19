@@ -100,37 +100,44 @@ Fatos "grandes" (grão item de NF / alto volume) a tornar incrementais:
 2h). Com a **carga inicial do histórico completo** (ver `arquitetura.md` cap. 11),
 reconstruir `fato_faturamento` (milhões de linhas) de 2 em 2h fica inviável.
 
-**Alvo:** incremental com **reprocessamento por janela móvel** — o mesmo
-princípio do extrator (que relê `watermark − 45 dias` para pegar cancelamentos e
-lançamentos retroativos). Padrão:
+**Implementado (estratégia B):** `incremental_strategy='append'` + um `pre_hook`
+que **apaga a janela recente** antes de o SELECT reinseri-la. Diferente de
+`delete+insert` (que deleta só pela `unique_key` do lote e **deixa órfãos** quando
+uma linha some da origem), o `pre_hook` apaga a janela **por coluna de corte** —
+então cancelamentos (linhas que sumiram do prata por `D_E_L_E_T_='*'`) também somem
+do fato. O corte usa `current_date`/`current_timestamp` nos dois lados (estável:
+não depende do estado da própria tabela, evitando o bug do `max()` pós-delete).
 
-```sql
-{{ config(
-    materialized='incremental',
-    incremental_strategy='delete+insert',
-    unique_key='recno_origem'
-) }}
+**A janela de corte segue o watermark da fonte** (`extracao/fontes.yml`) — tem que
+ser do mesmo tipo, senão o incremental fica inconsistente com o extrator:
 
-select ...
-from {{ ref('stg_faturamento') }} f
-{% if is_incremental() %}
-  -- reprocessa a janela recente: absorve updates E cancelamentos (linhas que
-  -- sumiram do prata por D_E_L_E_T_='*') sem reler a historia inteira.
-  where f.dt_emissao >= (
-      select coalesce(max(data_emissao), '1900-01-01')::date
-             - interval '{{ var("janela_rebuild_dias", 60) }} days'
-      from {{ this }}
-  )
-{% endif %}
-```
+- **Variante A — janela por data de emissão (60d).** Fontes com watermark de data
+  de negócio (`D2_EMISSAO`, `D1_EMISSAO`, `C5_EMISSAO`). O extrator só relê a janela
+  de emissão, então o fato também. Fatos: `fato_faturamento`, `devolucoes`,
+  `bonificacao`, `refaturamento`, `coopeval_remessa`, `acordo_comercial`,
+  `remessa_industrializacao`.
+  ```sql
+  {{ config(materialized='incremental', incremental_strategy='append',
+      pre_hook="{% if is_incremental() %}delete from {{ this }}
+               where data_emissao >= current_date - interval '60 days'{% endif %}") }}
+  select ... from {{ ref('stg_faturamento') }} f
+  {% if is_incremental() %} where f.dt_emissao >= current_date - interval '60 days' {% endif %}
+  ```
 
-**Ponto de atenção (cancelamentos):** com `delete+insert` + predicado de data, a
-janela recente é **apagada e reinserida** inteira — então linhas que sumiram da
-origem no período somem do fato (correto). Fora da janela, assume-se imutável
-(consistente com o corte de 45 dias do extrator). A janela do rebuild deve ser
-**≥ a janela do extrator** (sugerido 60d). **Requer validação:** rodar
-`dbt build` 2x e conferir que (a) a 1ª faz full, (b) a 2ª só mexe na janela, (c)
-um cancelamento recente some do fato.
+- **Variante B — janela por `_carregado_em` (7d).** Fontes com watermark
+  `S_T_A_M_P_` (que pega alteração em registro **antigo** — ex.: baixa num título
+  velho). Uma janela por emissão **perderia** essas alterações; por isso o corte é
+  pelo `_carregado_em` (que o extrator atualiza junto do `S_T_A_M_P_`). Fatos:
+  `fato_contas_areceber`, `contas_apagar`, `apontamento_producao`, `pedidos`
+  (`SE1`/`SE2`/`SC6`/`SD3`). Corte: `_carregado_em >= current_timestamp - interval '7 days'`.
+
+A janela do rebuild deve ser **≥ a janela do extrator** (45d de emissão / 3d de
+S_T_A_M_P_). Fora da janela, imutável. Primeira carga / `--full-refresh` é full.
+
+**Validado (19/10/2026):** full-refresh `PASS=632/ERROR=0`; incremental reprocessa
+só a janela na variante A (faturamento 4455, acordo 441, devoluções 391…) e é no-op
+na B sem carga recente; totais idênticos antes/depois nos 11 fatos; teste de
+cancelamento (recno marcado `D_E_L_E_T_='*'` some e volta ao reativar) — reversível.
 
 ---
 
