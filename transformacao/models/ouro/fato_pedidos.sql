@@ -1,5 +1,8 @@
 {{
   config(
+    materialized='incremental',
+    incremental_strategy='append',
+    pre_hook="{% if is_incremental() %}delete from {{ this }} where _carregado_em >= current_timestamp - interval '7 days'{% endif %}",
     indexes=[
       {'columns': ['recno_origem'], 'unique': True},
     ]
@@ -43,3 +46,7 @@ left join {{ ref('dim_cliente') }} dc on dc.chave_cliente = f.chave_cliente
 left join {{ ref('dim_produto') }} dp on dp.cod_produto = f.cod_produto
 left join {{ ref('dim_vendedor') }} dv on dv.cod_vendedor = f.cod_vendedor
 left join {{ ref('dim_vendedor') }} dg on dg.cod_vendedor = f.cod_gerente
+
+{% if is_incremental() %}
+where f._carregado_em >= current_timestamp - interval '7 days'
+{% endif %}

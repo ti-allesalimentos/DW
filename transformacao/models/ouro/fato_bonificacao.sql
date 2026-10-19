@@ -1,3 +1,15 @@
+{{
+  config(
+    materialized='incremental',
+    incremental_strategy='append',
+    pre_hook="{% if is_incremental() %}delete from {{ this }} where data_emissao >= current_date - interval '60 days'{% endif %}",
+    indexes=[
+      {'columns': ['data_emissao']},
+      {'columns': ['recno_origem'], 'unique': True},
+    ]
+  )
+}}
+
 /*
   Fato bonificacao — Protheus (SD2010, CFOP de bonificacao/amostra
   gratis). Grao: item de nota fiscal. Mesmas dimensoes conformadas do
@@ -24,3 +36,7 @@ from {{ ref('stg_bonificacao') }} f
 left join {{ ref('dim_cliente') }} dc on dc.chave_cliente = f.chave_cliente
 left join {{ ref('dim_produto') }} dp on dp.cod_produto = f.cod_produto
 left join {{ ref('dim_vendedor') }} dv on dv.cod_vendedor = f.cod_vendedor
+
+{% if is_incremental() %}
+where f.dt_emissao >= current_date - interval '60 days'
+{% endif %}

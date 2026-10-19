@@ -1,5 +1,8 @@
 {{
   config(
+    materialized='incremental',
+    incremental_strategy='append',
+    pre_hook="{% if is_incremental() %}delete from {{ this }} where _carregado_em >= current_timestamp - interval '7 days'{% endif %}",
     indexes=[
       {'columns': ['recno_origem'], 'unique': True},
     ]
@@ -28,3 +31,7 @@ select
     f._carregado_em
 from {{ ref('stg_apontamento_producao') }} f
 left join {{ ref('dim_produto') }} dp on dp.cod_produto = f.cod_produto
+
+{% if is_incremental() %}
+where f._carregado_em >= current_timestamp - interval '7 days'
+{% endif %}

@@ -1,3 +1,15 @@
+{{
+  config(
+    materialized='incremental',
+    incremental_strategy='append',
+    pre_hook="{% if is_incremental() %}delete from {{ this }} where data_emissao >= current_date - interval '60 days'{% endif %}",
+    indexes=[
+      {'columns': ['data_emissao']},
+      {'columns': ['recno_origem'], 'unique': True},
+    ]
+  )
+}}
+
 /*
   Fato acordo comercial — Protheus (SD1010, TES 050/052). Grao: item de
   NF de entrada. Sem vendedor (nao existe no legado para este fato).
@@ -22,3 +34,7 @@ select
 from {{ ref('stg_acordo_comercial') }} f
 left join {{ ref('dim_cliente') }} dc on dc.chave_cliente = f.chave_cliente
 left join {{ ref('dim_produto') }} dp on dp.cod_produto = f.cod_produto
+
+{% if is_incremental() %}
+where f.dt_emissao >= current_date - interval '60 days'
+{% endif %}

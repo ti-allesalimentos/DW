@@ -1,5 +1,8 @@
 {{
   config(
+    materialized='incremental',
+    incremental_strategy='append',
+    pre_hook="{% if is_incremental() %}delete from {{ this }} where _carregado_em >= current_timestamp - interval '7 days'{% endif %}",
     indexes=[
       {'columns': ['data_emissao']},
       {'columns': ['data_vencimento']},
@@ -46,3 +49,7 @@ from {{ ref('stg_contas_areceber') }} f
 left join {{ ref('dim_cliente') }} dc on dc.chave_cliente = f.chave_cliente
 left join {{ ref('dim_vendedor') }} dv on dv.cod_vendedor = f.cod_vendedor
 left join {{ ref('dim_natureza_financeira') }} dn on dn.cod_natureza = f.cod_natureza
+
+{% if is_incremental() %}
+where f._carregado_em >= current_timestamp - interval '7 days'
+{% endif %}

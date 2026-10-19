@@ -1,5 +1,8 @@
 {{
   config(
+    materialized='incremental',
+    incremental_strategy='append',
+    pre_hook="{% if is_incremental() %}delete from {{ this }} where _carregado_em >= current_timestamp - interval '7 days'{% endif %}",
     indexes=[
       {'columns': ['data_emissao']},
       {'columns': ['data_vencimento_real']},
@@ -42,3 +45,7 @@ select
 from {{ ref('stg_contas_apagar') }} f
 left join {{ ref('dim_fornecedor') }} df on df.chave_fornecedor = f.chave_fornecedor
 left join {{ ref('dim_natureza_financeira') }} dn on dn.cod_natureza = f.cod_natureza
+
+{% if is_incremental() %}
+where f._carregado_em >= current_timestamp - interval '7 days'
+{% endif %}
