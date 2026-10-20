@@ -1,0 +1,136 @@
+version: 2
+models:
+- name: fato_contas_areceber
+  description: 'Fato contas a receber — Protheus (SE1010). Grao: titulo/parcela.
+
+    '
+  columns:
+  - name: recno_origem
+    tests:
+    - unique
+    - not_null
+  - name: sk_cliente
+    tests:
+    - not_null
+    - relationships:
+        arguments:
+          to: ref('dim_cliente')
+          field: sk_cliente
+  - name: valor
+    tests:
+    - not_null
+- name: fato_contas_apagar
+  description: 'Fato contas a pagar — Protheus (SE2010). Grao: titulo/parcela. Exclui tipos FT/NDF/PA/PRE.
+
+    '
+  columns:
+  - name: recno_origem
+    tests:
+    - unique
+    - not_null
+  - name: sk_fornecedor
+    tests:
+    - not_null
+    - relationships:
+        arguments:
+          to: ref('dim_fornecedor')
+          field: sk_fornecedor
+  - name: valor
+    tests:
+    - not_null
+- name: fato_saldo_conta_corrente
+  description: 'Fato saldo diario de conta corrente — Protheus (CQ0010). Grao: filial + conta + data.
+
+    '
+  columns:
+  - name: filial
+    tests:
+    - not_null
+  - name: codigo_conta
+    tests:
+    - not_null
+  - name: data
+    tests:
+    - not_null
+  - name: valor_saldo_atual
+    tests:
+    - not_null
+- name: fato_movimento_bancario_juros
+  description: 'Fato movimento bancario de juros/antecipacao — Protheus (SE5010, motivo ''DEB'').
+
+    '
+  columns:
+  - name: recno_origem
+    tests:
+    - unique
+    - not_null
+- name: fato_movimento_bancario_ncc
+  description: 'Fato movimento bancario de NCC — Protheus (SE5010, tipo ''NCC'').
+
+    '
+  columns:
+  - name: recno_origem
+    tests:
+    - unique
+    - not_null
+- name: fato_tarifas_bancarias
+  description: 'Fato tarifas bancarias — Protheus (SE5010, naturezas de tarifa/IOF).
+
+    '
+  columns:
+  - name: recno_origem
+    tests:
+    - unique
+    - not_null
+- name: fato_descontos_obtidos
+  description: 'Fato descontos obtidos de fornecedores — Protheus (SE2010).
+
+    '
+  columns:
+  - name: recno_origem
+    tests:
+    - unique
+    - not_null
+  - name: valor
+    tests:
+    - not_null
+- name: fato_descontos_concedidos
+  description: 'Fato descontos concedidos a clientes — Protheus (SE1010).
+
+    '
+  columns:
+  - name: recno_origem
+    tests:
+    - unique
+    - not_null
+  - name: valor
+    tests:
+    - not_null
+- name: fato_rateio_natureza
+  description: 'Fato rateio de titulo por multiplas naturezas — Protheus (SEV010).
+
+    '
+  columns:
+  - name: recno_origem
+    tests:
+    - unique
+    - not_null
+- name: fato_lancamento_indireto
+  description: 'Fato lancamento de estoque indireto — Protheus (SD3010, TM=505).
+
+    '
+  columns:
+  - name: recno_origem
+    tests:
+    - unique
+    - not_null
+- name: fato_custo_comissao_compra
+  description: 'Fato custo de comissao sobre compra — Protheus (SF1010 tipo ''C'', serie ''COM''). Nao
+    confundir com fato_comissao (Fase 4, vendas).
+
+    '
+  columns:
+  - name: sk_custo_comissao
+    tests:
+    - unique
+    - not_null

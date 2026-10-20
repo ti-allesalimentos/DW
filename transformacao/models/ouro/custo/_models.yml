@@ -1,0 +1,21 @@
+version: 2
+models:
+- name: fato_entradas_custo
+  description: 'Fato itens de NF de entrada pra custeio — Protheus (SF1010+SD1010, tipo N/C).
+
+    '
+  columns:
+  - name: recno_origem
+    tests:
+    - unique
+    - not_null
+- name: fato_frete_entrada
+  description: 'Fato frete rateado em NF de entrada — Protheus (GWM010, tipo doc ''1''). Adiado da Fase
+    7 (Custo).
+
+    '
+  columns:
+  - name: sk_frete_entrada
+    tests:
+    - unique
+    - not_null

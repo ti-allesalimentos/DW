@@ -1,0 +1,65 @@
+version: 2
+models:
+- name: stg_motivo_rescisao
+  description: 'Motivo de rescisao com valor pago (SRG010+SRA010+RCC010+SRR010). Grao filial+matricula+cod_motivo+data_demissao.
+
+    '
+  columns:
+  - name: filial
+    tests:
+    - not_null
+- name: stg_dupla_funcao
+  description: 'Funcionarios com evento de dupla funcao ativo (RG1010). Grao recno_origem.
+
+    '
+  columns:
+  - name: recno_origem
+    tests:
+    - unique
+    - not_null
+- name: stg_historico_salarial
+  description: 'Historico de alteracao de salario base (SR3010), historico completo (sem o corte de data
+    do legado). Grao recno_origem.
+
+    '
+  columns:
+  - name: recno_origem
+    tests:
+    - unique
+    - not_null
+- name: stg_ausencias
+  description: 'Afastamentos/ausencias (SR8010). Grao recno_origem.
+
+    '
+  columns:
+  - name: recno_origem
+    tests:
+    - unique
+    - not_null
+- name: stg_banco_horas
+  description: 'Banco de horas (SPI010), agregado por funcionario. Grao chave_funcionario.
+
+    '
+  columns:
+  - name: chave_funcionario
+    tests:
+    - unique
+    - not_null
+- name: stg_apontamento_hora_extra
+  description: 'Apontamento de hora extra (SPC010 uniao SPH010), agregado por funcionario x mes x tipo.
+    Grao chave_funcionario+ano_mes+tipo_he.
+
+    '
+  columns:
+  - name: chave_funcionario
+    tests:
+    - not_null
+- name: stg_rescisao_rh
+  description: 'Rescisoes (SRG010), conformado — fonte do Turnover do Oryon Board. Grao recno_origem.
+
+    '
+  columns:
+  - name: recno_origem
+    tests:
+    - unique
+    - not_null
