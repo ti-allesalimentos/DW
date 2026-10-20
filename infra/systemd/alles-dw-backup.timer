@@ -1,0 +1,11 @@
+[Unit]
+Description=Backup diario do DW Alles (03:00)
+
+[Timer]
+# Todo dia as 03:00. Persistent: se a VM estava desligada, roda ao voltar.
+OnCalendar=*-*-* 03:00:00
+Persistent=true
+Unit=alles-dw-backup.service
+
+[Install]
+WantedBy=timers.target
