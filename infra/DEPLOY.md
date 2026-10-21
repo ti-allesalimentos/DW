@@ -10,13 +10,36 @@ de serviço **`alles-dw`** (é o que os systemd units esperam).
 
 ---
 
-## Pré-requisitos
+## Pré-requisitos — especificação da VM (para o time de infra)
 
-- VM Linux (Ubuntu/Debian recomendado) com **Docker + Docker Compose**, **git**,
-  **Python 3.11+** e **`uv`** (ou `python -m venv`).
-- Rede: a VM alcança o **Protheus** (SQL Server) e o **backend do Oryon** alcança
-  a VM. O Postgres do DW fica **só na rede interna**.
-- Acesso: usuário Protheus **somente leitura**; senha forte para o Postgres do DW.
+DW on-premises: Postgres + ETL Python + dbt, consumido pelo backend do Oryon.
+
+**Hardware**
+| Recurso | Mínimo | Recomendado | Observação |
+|---------|--------|-------------|------------|
+| vCPU | 4 | 8 | `dbt build` a cada 2h; carga inicial é intensiva |
+| RAM | 8 GB | 16 GB | extração carrega lotes em memória (pandas); Postgres + dbt juntos |
+| Disco | 100 GB SSD | 200 GB SSD | DB + índices + 14 dias de backup (~1,2 GB/dump) + WAL + Docker + logs |
+
+**SO:** Ubuntu Server LTS 22.04/24.04 ou Debian 12, **x86_64**. Timezone **America/Sao_Paulo**.
+
+**Software** (o deploy instala; infra pode deixar pronto): Docker Engine + Docker
+Compose plugin, Python 3.11+, git.
+
+**Rede**
+- **Saída:** acesso ao **Protheus (SQL Server)** de produção (host/porta) + internet
+  para Docker Hub, PyPI, GitHub e SMTP (allowlist possível).
+- **Entrada:** **TCP 8090** (trigger-api) e **TCP 5433** (Postgres) **apenas do IP do
+  backend do Oryon** — nunca internet; + **SSH (22)** para administração.
+- Firewall (ufw/firewalld) aplicando as regras acima.
+
+**Acesso/contas:** SSH; permissão para criar o usuário de serviço **`alles-dw`** no
+grupo **`docker`**; usuário Protheus **somente leitura**; senha forte para o Postgres
+do DW.
+
+**Dimensionamento do disco:** o histórico do Protheus começa em **01/02/2025** (a
+carga inicial não multiplica muito o volume), mas reserve folga para crescimento; os
+backups podem ir para um mount/volume separado se preferirem.
 
 ---
 
