@@ -241,7 +241,9 @@ def extrair(fonte: dict, *, modo: str, de: date | None, ate: date | None,
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Extracao Protheus -> bronze")
-    ap.add_argument("--fonte", help="extrai apenas esta fonte (nome do fontes.yml)")
+    ap.add_argument("--fonte", action="append",
+                    help="extrai apenas esta(s) fonte(s) do fontes.yml. "
+                         "Repetivel: --fonte SD2010 --fonte SD1010")
     ap.add_argument("--carga-inicial", action="store_true",
                     help="historico completo, em lotes anuais")
     ap.add_argument("--listar", action="store_true",
@@ -250,10 +252,13 @@ def main() -> int:
 
     fontes = carregar_config()
     if args.fonte:
-        fontes = [f for f in fontes if f["nome"] == args.fonte]
-        if not fontes:
-            print(f"Fonte '{args.fonte}' nao existe em {CONFIG.name}.")
+        pedidas = set(args.fonte)
+        existentes = {f["nome"] for f in fontes}
+        faltando = pedidas - existentes
+        if faltando:
+            print(f"Fonte(s) inexistente(s) em {CONFIG.name}: {', '.join(sorted(faltando))}")
             return 1
+        fontes = [f for f in fontes if f["nome"] in pedidas]
 
     if args.listar:
         for f in fontes:

@@ -45,6 +45,23 @@ LOG_DIR.mkdir(exist_ok=True)
 # dbt-core nao tem `python -m dbt` (sem __main__.py) — o executavel do
 # console-script mora do lado do python do mesmo venv.
 DBT_BIN = Path(sys.executable).parent / ("dbt.exe" if os.name == "nt" else "dbt")
+TRANSFORMACAO_DIR = PROJECT_DIR / "transformacao"
+
+# Dominios = assuntos/dashboards do Board. Cada um refresca com um `dbt --select`
+# pela pasta de modelos (ver docs/operacao_warehouse.md). As FONTES de cada
+# dominio nao sao mantidas a mao: sao derivadas do grafo do dbt
+# (dbt ls --resource-type source), seguindo as dependencias reais — inclusive
+# cadastros compartilhados entre dominios.
+DOMINIOS: dict[str, str] = {
+    "comercial":       "+path:models/ouro/comercial",
+    "financeiro":      "+path:models/ouro/financeiro",
+    "fiscal":          "+path:models/ouro/fiscal",
+    "industrial":      "+path:models/ouro/industrial",
+    "custo":           "+path:models/ouro/custo",
+    "compras":         "+path:models/ouro/compras",
+    "logistica":       "+path:models/ouro/logistica",
+    "gestao_pessoas":  "+path:models/ouro/gestao_pessoas",
+}
 
 API_KEY = os.getenv("TRIGGER_API_KEY")
 
@@ -69,8 +86,37 @@ def nomes_fontes_validos() -> list[str]:
     return [f["nome"] for f in carregar_config()]
 
 
+def fontes_do_dominio(dominio: str) -> list[str]:
+    """Fontes (nomes do fontes.yml) de que o dominio depende, via grafo do dbt.
+
+    Roda `dbt ls --select <select> --resource-type source` e mapeia cada
+    `bronze.<tabela>` para o nome do fontes.yml (= tabela em maiusculo),
+    mantendo so as que existem la.
+    """
+    select = DOMINIOS[dominio]
+    res = subprocess.run(
+        [str(DBT_BIN), "ls", "--select", select,
+         "--resource-type", "source", "--output", "name"],
+        cwd=TRANSFORMACAO_DIR,
+        env={**os.environ.copy(), "DBT_PROFILES_DIR": "."},
+        capture_output=True, text=True,
+    )
+    validas = set(nomes_fontes_validos())
+    achadas = set()
+    for linha in res.stdout.splitlines():
+        linha = linha.strip()
+        if linha.startswith("bronze."):
+            nome = linha.split(".", 1)[1].upper()   # bronze.sd2010 -> SD2010
+            if nome in validas:
+                achadas.add(nome)
+    return sorted(achadas)
+
+
 class RodarCargaRequest(BaseModel):
-    fonte: Optional[str] = None  # None = todas as fontes (igual ao CLI sem --fonte)
+    # Informe `fonte` OU `dominio` (nao os dois). Nenhum dos dois = ciclo
+    # completo (todas as fontes + dbt build completo), igual ao systemd.
+    fonte: Optional[str] = None       # uma fonte do fontes.yml
+    dominio: Optional[str] = None     # refresh direcionado por dashboard (ver DOMINIOS)
     solicitado_por: Optional[str] = None
 
 
@@ -97,6 +143,12 @@ def listar_fontes():
             "ultima_carga": status,
         })
     return resultado
+
+
+@app.get("/dominios", dependencies=[Depends(exigir_api_key)])
+def listar_dominios():
+    """Dominios (dashboards) que podem ser atualizados sob demanda."""
+    return [{"dominio": d, "select": s} for d, s in DOMINIOS.items()]
 
 
 @app.get("/execucoes", dependencies=[Depends(exigir_api_key)])
@@ -129,11 +181,20 @@ def obter_execucao(execucao_id: int):
 
 @app.post("/cargas/rodar", dependencies=[Depends(exigir_api_key)])
 def rodar_carga(body: RodarCargaRequest):
+    if body.fonte is not None and body.dominio is not None:
+        raise HTTPException(422, "informe 'fonte' OU 'dominio', nao os dois")
     if body.fonte is not None and body.fonte not in nomes_fontes_validos():
         raise HTTPException(422, f"fonte desconhecida: {body.fonte!r}")
+    if body.dominio is not None and body.dominio not in DOMINIOS:
+        raise HTTPException(422, f"dominio desconhecido: {body.dominio!r}. "
+                                 f"Validos: {sorted(DOMINIOS)}")
 
     if not _execucao_lock.acquire(blocking=False):
         raise HTTPException(409, "ja existe uma execucao manual em andamento")
+
+    # Rotulo gravado na coluna `fonte` do controle (reaproveitada): o nome da
+    # fonte, "dominio:<x>" para refresh por dashboard, ou "(todas)".
+    rotulo = f"dominio:{body.dominio}" if body.dominio else body.fonte
 
     engine = conexao.postgres()
     try:
@@ -145,7 +206,7 @@ def rodar_carga(body: RodarCargaRequest):
                     "VALUES (:fonte, :solicitado_por, 'extracao', 'rodando') "
                     "RETURNING id"
                 ),
-                {"fonte": body.fonte, "solicitado_por": body.solicitado_por},
+                {"fonte": rotulo, "solicitado_por": body.solicitado_por},
             ).scalar_one()
     except Exception:
         _execucao_lock.release()
@@ -153,11 +214,11 @@ def rodar_carga(body: RodarCargaRequest):
 
     thread = threading.Thread(
         target=_executar_em_background,
-        args=(execucao_id, body.fonte),
+        args=(execucao_id, body.fonte, body.dominio),
         daemon=True,
     )
     thread.start()
-    return {"execucao_id": execucao_id, "status": "rodando"}
+    return {"execucao_id": execucao_id, "status": "rodando", "alvo": rotulo or "(todas)"}
 
 
 def _atualizar_execucao(execucao_id: int, **campos) -> None:
@@ -170,19 +231,35 @@ def _atualizar_execucao(execucao_id: int, **campos) -> None:
         )
 
 
-def _executar_em_background(execucao_id: int, fonte: Optional[str]) -> None:
+def _executar_em_background(execucao_id: int, fonte: Optional[str],
+                            dominio: Optional[str] = None) -> None:
     log_path = LOG_DIR / f"execucao_manual_{execucao_id}.log"
     try:
         with open(log_path, "w", encoding="utf-8") as log:
             log.write(f"===== execucao {execucao_id} iniciada em {datetime.now(timezone.utc).isoformat()} =====\n")
-            log.write(f"fonte={fonte or '(todas)'}\n\n")
+
+            # Resolve o alvo: dominio (dashboard) -> fontes do grafo + dbt --select;
+            # fonte -> uma fonte + build completo; nenhum -> todas + build completo.
+            if dominio:
+                dbt_select = DOMINIOS[dominio]
+                fontes_alvo = fontes_do_dominio(dominio)
+                log.write(f"dominio={dominio}  select={dbt_select}\n")
+                log.write(f"fontes do dominio={', '.join(fontes_alvo) or '(nenhuma)'}\n\n")
+            elif fonte:
+                dbt_select = None
+                fontes_alvo = [fonte]
+                log.write(f"fonte={fonte}\n\n")
+            else:
+                dbt_select = None
+                fontes_alvo = None  # todas
+                log.write("fonte=(todas)\n\n")
             log.flush()
 
             log.write("--- extracao ---\n")
             log.flush()
             cmd_extracao = [sys.executable, "-m", "extracao.carga"]
-            if fonte:
-                cmd_extracao += ["--fonte", fonte]
+            for f in (fontes_alvo or []):
+                cmd_extracao += ["--fonte", f]
             resultado = subprocess.run(
                 cmd_extracao, cwd=PROJECT_DIR, env=os.environ.copy(),
                 stdout=log, stderr=subprocess.STDOUT,
@@ -196,10 +273,13 @@ def _executar_em_background(execucao_id: int, fonte: Optional[str]) -> None:
                 return
 
             _atualizar_execucao(execucao_id, etapa="dbt")
-            log.write("\n--- dbt build ---\n")
+            cmd_dbt = [str(DBT_BIN), "build"]
+            if dbt_select:
+                cmd_dbt += ["--select", dbt_select]
+            log.write(f"\n--- dbt {' '.join(cmd_dbt[1:])} ---\n")
             log.flush()
             resultado = subprocess.run(
-                [str(DBT_BIN), "build"],
+                cmd_dbt,
                 cwd=PROJECT_DIR / "transformacao",
                 env={**os.environ.copy(), "DBT_PROFILES_DIR": "."},
                 stdout=log, stderr=subprocess.STDOUT,

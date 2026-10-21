@@ -102,24 +102,38 @@ dotenv -f ../.env run -- ../.venv/bin/dbt build --select +path:models/ouro/comer
 - Para um único modelo/tela: `--select +fato_faturamento` ou
   `--select +agg_faturamento_mes`.
 
-### Opção B — sob demanda pela API (consumida pelo Oryon)
-A **`trigger_api`** (`infra/trigger_api/main.py`, porta 8090) já expõe:
+### Opção B — sob demanda pela API (o botão "Atualizar agora" do Board)
+A **`trigger_api`** (`infra/trigger_api/main.py`, porta 8090, protegida por
+`X-API-Key`, uma execução por vez) expõe:
 ```
 GET  /health
 GET  /fontes                 # fontes + status da ultima carga
+GET  /dominios               # dashboards que podem ser atualizados sob demanda
 GET  /execucoes              # historico de execucoes manuais
-POST /cargas/rodar           # body: {"fonte": "SD2010"|null, "solicitado_por": "..."}
+POST /cargas/rodar           # body: {"fonte"|"dominio"|null, "solicitado_por"}
 ```
-Hoje `POST /cargas/rodar` extrai **uma fonte (ou todas) + `dbt build` completo**.
-Protegida por `X-API-Key` (do `.env`), com lock de uma execução por vez.
 
-**Como habilitar refresh por dashboard (extensão):** acrescentar um parâmetro
-`dominio` ao `POST /cargas/rodar` que (1) extraia as fontes do mapa acima e (2)
-rode `dbt build --select +path:models/ouro/<dominio>` em vez do build completo.
-O ponto de mudança é a função `_executar_em_background` (que monta o comando do
-dbt) — hoje ela roda `dbt build` sem `--select`; basta anexar o seletor do domínio.
-Assim o Board ganha um botão "Atualizar agora" por tela, sem reprocessar o DW
-inteiro.
+`POST /cargas/rodar` aceita (um OU outro, nunca os dois):
+- **`dominio`** (ex.: `"comercial"`) → **refresh por dashboard**: extrai só as
+  fontes daquele domínio e roda `dbt build --select +path:models/ouro/<dominio>`.
+  As fontes são derivadas do **grafo do dbt** (seguem as dependências reais,
+  inclusive cadastros e dependências cruzadas) — não há mapa a manter à mão.
+- **`fonte`** (ex.: `"SD2010"`) → uma fonte + `dbt build` completo.
+- **nenhum** → todas as fontes + build completo (= o ciclo do systemd).
+
+Exemplo (o que o botão "Atualizar agora" do Board dispara):
+```bash
+curl -X POST http://<vm>:8090/cargas/rodar \
+  -H "X-API-Key: $TRIGGER_API_KEY" -H 'Content-Type: application/json' \
+  -d '{"dominio": "comercial", "solicitado_por": "fulano@alles"}'
+# -> {"execucao_id": 42, "status": "rodando", "alvo": "dominio:comercial"}
+```
+Acompanhe em `GET /execucoes/{id}` (ou `ouro.controle_execucoes_manuais`).
+
+**Fiação no Oryon (frontend → backend → API):** o botão na tela chama o módulo
+`dw` do backend do Oryon, que repassa o `dominio` da tela para este
+`POST /cargas/rodar`. O mapa tela→domínio vive no Oryon (ex.: tela de Faturamento
+→ `comercial`). O DW não precisa saber de telas — só de domínios.
 
 ---
 
