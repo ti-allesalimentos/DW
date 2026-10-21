@@ -1,0 +1,17 @@
+[Unit]
+Description=Alles DW — backup (pg_dump) do Postgres
+After=docker.service
+Wants=docker.service
+# Reaproveita o mesmo alerta de falha do pipeline.
+OnFailure=alles-dw-alerta@%n.service
+
+[Service]
+Type=oneshot
+User=alles-dw
+Group=alles-dw
+WorkingDirectory=/opt/alles-dataplatform
+ExecStart=/opt/alles-dataplatform/infra/scripts/backup_dw.sh
+TimeoutStartSec=1800
+
+[Install]
+WantedBy=multi-user.target

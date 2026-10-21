@@ -1,0 +1,29 @@
+version: 2
+models:
+- name: stg_cte_logistica
+  description: 'CT-e, lado logistico (GW3010). Grao recno_origem.
+
+    '
+  columns:
+  - name: recno_origem
+    tests:
+    - unique
+    - not_null
+- name: stg_rateio_frete
+  description: 'Rateio de frete por item de NF (GWM010). Grao recno_origem.
+
+    '
+  columns:
+  - name: recno_origem
+    tests:
+    - unique
+    - not_null
+- name: stg_doc_frete
+  description: 'Documento de frete com ocorrencia de transporte (GW4010 + GU3/GW3/GW1/GWL/GWD/AC9). Grao
+    documento x anexo (recno_origem + recno_ac9) — um documento pode ter varios objetos anexados.
+
+    '
+  columns:
+  - name: recno_origem
+    tests:
+    - not_null

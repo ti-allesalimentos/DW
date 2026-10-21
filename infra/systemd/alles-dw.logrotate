@@ -1,11 +1,21 @@
-# Copiar para /etc/logrotate.d/alles-dw na VM de producao.
-# journald ja rotaciona sozinho (journalctl -u alles-dw-pipeline); isso
-# e so pro arquivo de conveniencia em logs/pipeline.log.
-/opt/alles-dataplatform/logs/pipeline.log {
-    daily
-    rotate 14
+# =====================================================================
+# Logrotate do pipeline do DW Alles — evita que logs/pipeline.log cresca
+# sem limite na VM.
+#
+# Instalar na VM (uma vez):
+#   sudo cp infra/systemd/alles-dw.logrotate /etc/logrotate.d/alles-dw
+#   # ajuste o caminho abaixo se o projeto nao estiver em /opt/alles-dataplatform
+#
+# copytruncate: o rodar_pipeline.sh mantem o arquivo aberto (tee -a); truncar
+# a copia evita ter que sinalizar/reiniciar qualquer processo.
+# =====================================================================
+/opt/alles-dataplatform/logs/*.log {
+    weekly
+    rotate 8
     compress
+    delaycompress
     missingok
     notifempty
     copytruncate
+    su alles-dw alles-dw
 }

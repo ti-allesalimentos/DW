@@ -21,6 +21,11 @@ dbt_packages/
 # Legado preservado apenas como referencia local
 legado/**/__pycache__/
 
+# Estado local do agente/editor (lock, settings locais) — nao versionar
+.claude/
+
+backups/
+
 # Sistema
 .DS_Store
 Thumbs.db

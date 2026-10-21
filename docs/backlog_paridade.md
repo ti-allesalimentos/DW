@@ -181,15 +181,38 @@ Não substitui o Oryon Board; é uma ponte entre a entrega do DW e a das telas.
 
 ---
 
-## 6. Perguntas que o inventário levanta
+## 6. Perguntas que o inventário levanta — respondidas (01/09/2026)
 
-1. **`Comercial` ou `Venda Real` — qual é a referência?** Os dois medem faturamento com
-   fatos diferentes. Assim como no caso da planilha versus relatórios da diretoria,
-   isso precisa de veredito.
-2. **`VENDA REAL` deveria subtrair devolução?** Se sim, é um erro em produção hoje.
-3. **As medidas `_OLD`, `2`, `test` ainda alimentam algum visual?** Dá para verificar
-   varrendo os JSON das páginas — vale fazer antes de migrar qualquer uma delas.
-4. **A margem paramétrica é aceitável no destino**, ou o projeto deve entregar margem
-   custeada quando o domínio Custo ficar pronto?
+1. **`Comercial` ou `Venda Real` — qual é a referência?** ✅ **`Venda Real`**
+   (`fFaturamento`) é a fonte canônica de faturamento pro Board. `Comercial`
+   (`fFaturamentoConsolidado`) fica como candidato a aposentar quando o
+   domínio for reconstruído — suas medidas de ponte preço-volume-mix e RFV
+   precisam ser reavaliadas contra a base de `Venda Real`, não recriadas
+   como estão.
+2. **`VENDA REAL` deveria subtrair devolução?** ✅ **Não é bug — são dois
+   métodos legítimos, e o negócio escolheu qual vira a definição única.**
+   `fFaturamento[Total - Dev]` (usada por `VENDA REAL`) vem de um *merge*
+   (Power Query) contra `fato_devoluções` pela chave
+   `FILIAL + NF + COD CLIENTE + COD LOJA + COD PRODUTO`, calculando
+   `TOTAL DA NF ORIGEM − VALOR DEVOLVIDO` **linha a linha, atribuído à nota
+   de origem**. `Venda Real Liquida` desconta o **total agregado** de
+   devolução do período contra o **total agregado** de venda do período,
+   sem atrelar cada devolução à sua NF de origem — por isso diverge de
+   `VENDA REAL` quando venda e devolução caem em períodos diferentes (nota
+   vendida em março, devolvida em maio: o método por NF de origem líquida
+   em março; o método agregado por período mostra os dois eventos
+   separados). **Decisão:** o Board usa o método de `VENDA REAL`
+   (netting por NF de origem, join com `fato_devolucoes` pela mesma
+   chave) como a definição única de faturamento líquido — é o mais preciso
+   por atribuir cada devolução à venda que a gerou, não uma correção de bug.
+3. **As medidas `_OLD`, `2`, `test` ainda alimentam algum visual?** ✅
+   **Não — descartado como sedimento.** Não precisam ser replicadas nem
+   investigadas linha a linha no destino.
+4. **A margem paramétrica é aceitável no destino?** ⏸️ **Adiado — margem não
+   entra no escopo do Board por enquanto.** Nenhuma tela de margem
+   (paramétrica ou custeada) é construída nesta rodada da Fase 12; revisitar
+   quando houver decisão de negócio sobre custo real vs. paramétrico.
 5. **Os dataflows de `Pedidos de Venda`** — o que alimenta esses cinco conjuntos, e essa
-   origem continua depois da migração?
+   origem continua depois da migração? **Ainda em aberto** — não bloqueia o
+   início pelo domínio de faturamento (`Venda Real`); revisitar quando a
+   tela de Pedidos de Venda entrar na fila.

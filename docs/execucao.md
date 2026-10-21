@@ -251,7 +251,38 @@ não tem `_STAMP_` nem data de negócio confiável, e é barata (7,8 mil
 linhas). Acompanhe mesmo assim: se o volume de mudanças por ciclo
 crescer muito, o tempo pode voltar a subir.
 
-## 7. O que nunca fazer
+## 7. API de trigger sob demanda (painel do Oryon)
+
+O ciclo automático roda a cada 2h (seção 6). Pra rodar uma fonte específica
+(ou o ciclo inteiro) sem esperar o timer e sem SSH, existe uma API HTTP
+interna em `infra/trigger_api/`, consumida pelo módulo `dw` do Oryon.
+
+```bash
+uvicorn infra.trigger_api.main:app --host 127.0.0.1 --port 8090
+```
+
+Precisa de `TRIGGER_API_KEY` no `.env` (gere com
+`python -c "import secrets; print(secrets.token_hex(32))"`) — toda rota exige
+o header `X-API-Key`, exceto `/health`. Só aceita fontes que existem em
+`extracao/fontes.yml`; nunca roda comando livre.
+
+- `GET /fontes` — todas as fontes + status da última carga de cada uma
+  (`ouro.vw_saude_cargas`).
+- `POST /cargas/rodar` — dispara extração (`fonte` opcional; sem ela, roda
+  todas) seguida de `dbt build`, em background. Recusa (`409`) se já tiver
+  uma execução manual em andamento — o lock é em memória e só vale com
+  `--workers 1` (ver comentário no service file).
+- `GET /execucoes` / `GET /execucoes/{id}` — histórico e status de
+  execuções manuais (`ouro.controle_execucoes_manuais`, tabela nova —
+  aplique `infra/sql/02_execucoes_manuais.sql`). Log bruto de cada
+  execução fica em `logs/execucao_manual_<id>.log`.
+
+Em produção roda como serviço próprio
+(`infra/systemd/alles-dw-trigger-api.service`), na porta 8090, liberada só
+pro IP do backend do Oryon no firewall da VM — a API key não substitui
+isolamento de rede.
+
+## 8. O que nunca fazer
 
 - Colocar filtro de negócio na extração. Bronze é pouso fiel; regra é da prata.
 - Rodar a carga inicial em horário comercial.
