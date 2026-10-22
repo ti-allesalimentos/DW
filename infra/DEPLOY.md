@@ -140,7 +140,7 @@ sudo -u alles-dw docker exec -i alles_dw_postgres psql -U alles -d alles_dw -v O
 **4) dbt: dependências e seeds:**
 ```bash
 sudo -u alles-dw bash -c 'cd /opt/alles-dataplatform/transformacao \
-  && cp -n profiles.yml.example profiles.yml && export DBT_PROFILES_DIR=. \
+  && [ -f profiles.yml ] || cp profiles.yml.example profiles.yml && export DBT_PROFILES_DIR=. \
   && ../.venv/bin/dotenv -f ../.env run -- ../.venv/bin/dbt deps \
   && ../.venv/bin/dotenv -f ../.env run -- ../.venv/bin/dbt seed'
 ```
