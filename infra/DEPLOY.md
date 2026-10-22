@@ -45,29 +45,67 @@ backups podem ir para um mount/volume separado se preferirem.
 
 ## Fase 1 — Provisionar a VM
 
+Executado e validado na VM `srvdatawarehouse` (Ubuntu 24.04). O `sudo` pede a senha
+do seu usuário; os demais comandos rodam como o usuário de serviço `alles-dw`.
+
 ```bash
-# usuário de serviço + docker
-sudo useradd -r -m -d /opt/alles-dataplatform -s /usr/sbin/nologin alles-dw
-sudo usermod -aG docker alles-dw          # para o pipeline/backup usarem `docker exec`
+# fuso horario (os timers dependem disso) + pacotes (no Ubuntu 24.04 o venv e pacote a parte)
+sudo timedatectl set-timezone America/Sao_Paulo
+sudo apt-get update && sudo apt-get install -y python3.12-venv python3-pip
 
-# código (deploy a partir do git)
-sudo -u alles-dw git clone git@github.com:ti-allesalimentos/DW.git /opt/alles-dataplatform
-cd /opt/alles-dataplatform
-
-# venv + dependencias (pinadas no requirements.txt; extrator usa pytds, sem ODBC)
-sudo -u alles-dw python3 -m venv .venv
-sudo -u alles-dw .venv/bin/pip install -r requirements.txt
+# usuario de servico. O home e /home/alles-dw (NAO /opt/...): o git clone abaixo
+# precisa de um diretorio vazio.
+sudo useradd -m -s /bin/bash alles-dw
+sudo usermod -aG docker alles-dw          # para o pipeline/backup usarem `docker`
+sudo mkdir -p /opt/alles-dataplatform
+sudo chown alles-dw:alles-dw /opt/alles-dataplatform
 ```
 
-**Secrets (`.env`, fora do git):**
+**Chave de deploy (o repositório é privado, a VM clona por SSH, somente leitura):**
 ```bash
-sudo -u alles-dw cp .env.example .env
-sudo -u alles-dw nano .env    # preencher Protheus (read-only), senha do DW,
-                              # TRIGGER_API_KEY e o bloco SMTP (alerta por e-mail)
+sudo -u alles-dw mkdir -m 700 /home/alles-dw/.ssh
+sudo -u alles-dw ssh-keygen -t ed25519 -N "" -C "alles-dw@srvdatawarehouse" -f /home/alles-dw/.ssh/id_ed25519
+sudo -u alles-dw sh -c 'ssh-keyscan -t ed25519 github.com >> /home/alles-dw/.ssh/known_hosts'
+sudo cat /home/alles-dw/.ssh/id_ed25519.pub     # chave PUBLICA (nao e segredo)
+```
+No GitHub: **ti-allesalimentos/DW → Settings → Deploy keys → Add deploy key**, cole a
+chave pública e **deixe "Allow write access" desmarcado**. Teste (a mensagem
+`successfully authenticated` basta; o comando sai com código 1 mesmo assim):
+```bash
+sudo -u alles-dw ssh -T git@github.com
+```
+
+**Código e dependências:**
+```bash
+# use --branch master (ou a branch de ensaio, enquanto o PR nao estiver mesclado)
+sudo -u alles-dw git clone --branch master git@github.com:ti-allesalimentos/DW.git /opt/alles-dataplatform
+cd /opt/alles-dataplatform
+sudo -u alles-dw python3 -m venv .venv
+sudo -u alles-dw .venv/bin/pip install -r requirements.txt   # extrator usa pytds, sem ODBC
+sudo -u alles-dw .venv/bin/dbt --version | grep -iE "installed|postgres"   # dbt-core 1.12.x
+```
+
+**Secrets (`.env`, fora do git).** A senha do Postgres e a `TRIGGER_API_KEY` são geradas
+na própria VM e nunca passam pelo terminal:
+```bash
+sudo -u alles-dw bash -c 'cd /opt/alles-dataplatform \
+  && cp .env.example .env && chmod 600 .env \
+  && sed -i "s|^POSTGRES_PASSWORD=.*|POSTGRES_PASSWORD=$(openssl rand -hex 24)|; s|^TRIGGER_API_KEY=.*|TRIGGER_API_KEY=$(openssl rand -hex 32)|" .env'
+
+sudo -u alles-dw nano /opt/alles-dataplatform/.env   # Protheus (read-only) e bloco SMTP
+```
+Mantenha `POSTGRES_HOST=localhost` e `POSTGRES_PORT=5433` (o pipeline roda na VM). **Não use
+comentário na mesma linha de um valor** (o `alertar_falha.sh` lê a linha crua).
+
+Valide as conexões (somente leitura, não imprime credenciais). O Protheus deve dar `[OK]`;
+o Postgres só passa depois da Fase 2:
+```bash
+sudo -u alles-dw bash -c 'cd /opt/alles-dataplatform && .venv/bin/python infra/scripts/testar_conexoes.py'
 ```
 
 **Rede/firewall:** liberar a porta **8090** (trigger-api) **só para o IP do backend
-do Oryon**; nunca para a internet. O Postgres (5433) não sai da VM.
+do Oryon**; nunca para a internet. O Postgres (5433) só precisa ser alcançável pelo
+backend do Oryon (role somente leitura) e nunca pela internet.
 
 ---
 
@@ -76,27 +114,35 @@ do Oryon**; nunca para a internet. O Postgres (5433) não sai da VM.
 ```bash
 cd /opt/alles-dataplatform
 
-# 1) Postgres do DW (container)
-docker compose -f infra/docker-compose.yml up -d postgres
+# 1) Postgres do DW (container). O --env-file e OBRIGATORIO: sem ele o compose procura
+#    o .env dentro de infra/, nao acha, e sobe com usuario/banco vazios.
+sudo -u alles-dw docker compose -f infra/docker-compose.yml --env-file .env up -d postgres
+sudo docker ps --filter name=alles_dw_postgres --format '{{.Names}} {{.Status}}'   # espere "(healthy)"
 
-# 2) Schemas, controle de cargas, execucoes manuais
-docker exec -i alles_dw_postgres psql -U alles -d alles_dw < infra/sql/00_schemas.sql
-docker exec -i alles_dw_postgres psql -U alles -d alles_dw < infra/sql/01_controle_cargas.sql
-docker exec -i alles_dw_postgres psql -U alles -d alles_dw < infra/sql/02_execucoes_manuais.sql
+# 2) Schemas, controle de cargas, execucoes manuais (idempotentes)
+for f in 00_schemas 01_controle_cargas 02_execucoes_manuais; do
+  sudo -u alles-dw docker exec -i alles_dw_postgres psql -U alles -d alles_dw -v ON_ERROR_STOP=1 < infra/sql/$f.sql
+done
+```
 
-# 3) Role de leitura do Oryon (oryon_ro) — criar com a senha do .env do backend,
-#    depois aplicar os grants (idempotentes).
-docker exec -i alles_dw_postgres psql -U alles -d alles_dw \
-  -c "CREATE ROLE oryon_ro LOGIN PASSWORD 'DEFINA_A_SENHA';"
-docker exec -i alles_dw_postgres psql -U alles -d alles_dw < infra/sql/03_grants_oryon_ro.sql
+**3) Role de leitura do Oryon (`oryon_ro`).** A senha é digitada no `psql` (não aparece
+na tela nem fica no histórico). Guarde-a no gerenciador de senhas: vai no `.env` do
+backend do Oryon como `DW_POSTGRES_PASSWORD`.
+```bash
+sudo -u alles-dw docker exec -it alles_dw_postgres psql -U alles -d alles_dw
+#   dentro do psql:
+#     CREATE ROLE oryon_ro LOGIN;
+#     \password oryon_ro
+#     \q
+sudo -u alles-dw docker exec -i alles_dw_postgres psql -U alles -d alles_dw -v ON_ERROR_STOP=1 < infra/sql/03_grants_oryon_ro.sql
+```
 
-# 4) dbt: deps + seeds
-cd transformacao
-cp profiles.yml.example profiles.yml
-export DBT_PROFILES_DIR=.
-dotenv -f ../.env run -- ../.venv/bin/dbt deps
-dotenv -f ../.env run -- ../.venv/bin/dbt seed
-cd ..
+**4) dbt: dependências e seeds:**
+```bash
+sudo -u alles-dw bash -c 'cd /opt/alles-dataplatform/transformacao \
+  && cp -n profiles.yml.example profiles.yml && export DBT_PROFILES_DIR=. \
+  && ../.venv/bin/dotenv -f ../.env run -- ../.venv/bin/dbt deps \
+  && ../.venv/bin/dotenv -f ../.env run -- ../.venv/bin/dbt seed'
 ```
 
 **Backup (inegociável em produção):** habilitar o timer diário (ver Fase 4) e
@@ -182,6 +228,8 @@ que o e-mail chega (`alles-dw-alerta@...`). Depois corrija.
 |---|---|
 | `Could not import module "main"` (backend) / container em restart logo após reiniciar o Docker | bind-mount em cache obsoleto → `docker compose up -d --force-recreate` |
 | Board para de ler após um `dbt build` | grant do `oryon_ro` → reaplicar `infra/sql/03_grants_oryon_ro.sql` (o ALTER DEFAULT PRIVILEGES evita isso) |
+| Postgres não sobe / `variable POSTGRES_USER is not set` | faltou `--env-file .env` no `docker compose` (sem ele o `.env` é procurado em `infra/`) |
+| `pip install` falha com `ResolutionImpossible` (mashumaro) | usar o `requirements.txt` do repo (`mashumaro>=3.15,<3.18`); não forçar versão do mashumaro |
 | Extração falha ao conectar no Protheus | `.env` (host/porta/credenciais). O extrator usa `pytds` — **não** precisa de ODBC |
 | `dbt` com erro de versão/import | usar o `.venv` do projeto (deps pinadas: dbt-core 1.12.x, mashumaro≥3.22) |
 | Pipeline falhou | `journalctl -u alles-dw-pipeline -n 100` e `ouro.controle_cargas` / `ouro.vw_saude_cargas` |
