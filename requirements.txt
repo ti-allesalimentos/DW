@@ -3,7 +3,9 @@ python-dotenv>=1.0
 SQLAlchemy>=2.0
 psycopg2-binary>=2.9      # driver Postgres
 # Driver SQL Server (Protheus) puro Python — nao exige ODBC Driver no SO.
-python-tds>=1.17
+# Fixado em 1.17.x: extracao/conexao.py altera Collation.get_codec (API interna do
+# pytds) para decodificar varchar de forma tolerante. Revalidar ao subir a versao.
+python-tds>=1.17,<1.18
 sqlalchemy-pytds>=1.0     # dialeto mssql+pytds para o SQLAlchemy
 pandas>=2.2
 PyYAML>=6.0
