@@ -152,17 +152,37 @@ sudo -u alles-dw bash -c 'cd /opt/alles-dataplatform/transformacao \
 
 ## Fase 3 — Carga inicial do histórico
 
-A operação mais pesada do projeto (ler todo o `SD2` do Protheus). Fazer **fora do
-horário comercial**, por lotes anuais, medindo o impacto no ERP.
+A operação mais pesada do projeto: lê as 71 fontes do Protheus de produção. Estimativa
+(histórico de cargas do DW de dev): **3 a 5 horas**, dominadas pela leitura do Protheus
+(só `SELECT`; as fontes por data entram em lotes anuais a partir de 01/02/2025, os
+cadastros e as sem data entram cheios). Fazer **fora do horário comercial**.
+
+O extrator (`python -m extracao.carga`) **para na primeira fonte que falha**. Por isso a
+carga inicial usa o runner `infra/scripts/carga_inicial.sh`: chama o extrator **uma fonte
+por vez**, segue adiante quando uma falha, **pula o que já foi carregado** (é retomável) e
+lista no fim o que falhou. Reexecutar não duplica nada (a carga é `MERGE`).
 
 ```bash
 cd /opt/alles-dataplatform
-.venv/bin/python -m extracao.carga --listar          # confere o plano
-.venv/bin/python -m extracao.carga --carga-inicial    # historico completo, por lotes
+sudo -u alles-dw bash -c 'DRY_RUN=1 infra/scripts/carga_inicial.sh'   # mostra o plano (nao carrega)
 
-cd transformacao
-export DBT_PROFILES_DIR=.
-dotenv -f ../.env run -- ../.venv/bin/dbt build        # primeira construcao = full
+# carga de verdade, desacoplada do SSH (pode fechar o terminal):
+sudo -u alles-dw bash -c 'nohup infra/scripts/carga_inicial.sh >/dev/null 2>&1 &'
+tail -f logs/carga_inicial.log          # acompanha (Ctrl+C so sai do tail)
+```
+
+Se alguma fonte falhar, o final do log lista quais e o comando para refazer só elas
+(`infra/scripts/carga_inicial.sh FONTE1 FONTE2`). Para uma fonte específica já carregada,
+`FORCAR=1`. Conferência do estado, a qualquer hora:
+```bash
+sudo docker exec alles_dw_postgres psql -U alles -d alles_dw -c \
+  "select status, count(*) from ouro.controle_cargas group by 1;"
+```
+
+Depois da carga, construa o modelo (primeira construção = full):
+```bash
+sudo -u alles-dw bash -c 'cd /opt/alles-dataplatform/transformacao && export DBT_PROFILES_DIR=. \
+  && ../.venv/bin/dotenv -f ../.env run -- ../.venv/bin/dbt build'
 ```
 
 Meta: **`dbt build` verde** (`PASS=... ERROR=0`) e bronze/ouro populados.
