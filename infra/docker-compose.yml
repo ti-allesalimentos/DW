@@ -2,6 +2,8 @@ services:
   postgres:
     image: postgres:16
     container_name: alles_dw_postgres
+    # Sobe junto com o Docker apos reboot da VM (sem isso o DW ficava parado).
+    restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
