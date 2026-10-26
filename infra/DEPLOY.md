@@ -137,7 +137,13 @@ sudo -u alles-dw docker exec -it alles_dw_postgres psql -U alles -d alles_dw
 sudo -u alles-dw docker exec -i alles_dw_postgres psql -U alles -d alles_dw -v ON_ERROR_STOP=1 < infra/sql/03_grants_oryon_ro.sql
 ```
 
-**4) dbt: dependências e seeds:**
+**4) Ajustes de sessão (obrigatório — evita travamento do pipeline):**
+```bash
+sudo -u alles-dw docker exec -i alles_dw_postgres psql -U alles -d alles_dw -v ON_ERROR_STOP=1 < infra/sql/04_ajustes_sessao.sql
+```
+Sem isto, uma consulta lenta do dbt pode ficar órfã no Postgres e travar a extração dos ciclos seguintes.
+
+**5) dbt: dependências e seeds:**
 ```bash
 sudo -u alles-dw bash -c 'cd /opt/alles-dataplatform/transformacao \
   && [ -f profiles.yml ] || cp profiles.yml.example profiles.yml && export DBT_PROFILES_DIR=. \
