@@ -49,6 +49,16 @@ sources:
         description: Cadastro de vendedores e gerentes.
       - name: sb1010
         description: Cadastro de produtos.
+      - name: da0010
+        description: Cabecalho de tabela de preco.
+        columns:
+          - name: r_e_c_n_o_
+            tests: [unique, not_null]
+      - name: da1010
+        description: Item de tabela de preco (produto x UF x tabela), preco de venda de referencia.
+        columns:
+          - name: r_e_c_n_o_
+            tests: [unique, not_null]
       - name: se4010
         description: Condicoes de pagamento.
       - name: sc9010

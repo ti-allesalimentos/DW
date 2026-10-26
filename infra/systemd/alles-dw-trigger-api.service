@@ -1,0 +1,25 @@
+[Unit]
+Description=Alles DW — API de trigger sob demanda (consumida pelo modulo dw do Oryon)
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=alles-dw
+Group=alles-dw
+WorkingDirectory=/opt/alles-dataplatform
+# Sempre --workers 1: o lock de "so uma execucao manual por vez" e em
+# memoria (ver infra/trigger_api/main.py) — mais de um worker quebra essa
+# garantia porque cada worker teria seu proprio lock.
+#
+# --host 0.0.0.0: precisa ser alcancavel pelo backend do Oryon (rede
+# interna). A API key protege as rotas, mas o isolamento de rede de
+# verdade e o firewall da VM — libere a porta 8090 so pro IP do backend
+# do Oryon, nunca pra internet.
+ExecStart=/opt/alles-dataplatform/.venv/bin/uvicorn infra.trigger_api.main:app \
+    --host 0.0.0.0 --port 8090 --workers 1
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

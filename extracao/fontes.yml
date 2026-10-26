@@ -104,6 +104,22 @@ fontes:
     tipo_watermark: timestamp
     janela_movel_dias: 3
 
+  - nome: DA0010          # cabecalho de tabela de preco
+    tabela: DA0010
+    destino: bronze.da0010
+    chave: R_E_C_N_O_
+    coluna_watermark: S_T_A_M_P_
+    tipo_watermark: timestamp
+    janela_movel_dias: 3
+
+  - nome: DA1010          # item de tabela de preco (produto x UF x tabela)
+    tabela: DA1010
+    destino: bronze.da1010
+    chave: R_E_C_N_O_
+    coluna_watermark: S_T_A_M_P_
+    tipo_watermark: timestamp
+    janela_movel_dias: 3
+
   - nome: SE4010          # condicoes de pagamento
     tabela: SE4010
     destino: bronze.se4010
@@ -383,11 +399,17 @@ fontes:
     # sem _STAMP_ — carga full, tabela pequena (253 linhas).
 
   # ---------- Logistica (Fase 9) ----------
-  - nome: GU3010           # cadastro de transportador
+  - nome: GU3010           # cadastro de transportador (emitente TMS)
     tabela: GU3010
     destino: bronze.gu3010
     chave: R_E_C_N_O_
     # sem _STAMP_ — carga full. 7,9k linhas.
+
+  - nome: SA4010           # cadastro de transportadoras (SIGACOM/faturamento)
+    tabela: SA4010
+    destino: bronze.sa4010
+    chave: R_E_C_N_O_
+    # cadastro pequeno (~230 linhas) — carga full, como o GU3010.
 
   - nome: GW1010           # documento de carga (romaneio)
     tabela: GW1010

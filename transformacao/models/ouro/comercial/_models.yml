@@ -1,0 +1,313 @@
+version: 2
+models:
+- name: agg_faturamento_mes
+  description: 'Agregado mensal de Venda Real (liquida de devolucao) — grao ano_mes x filial x sk_cliente
+    x sk_vendedor x sk_supervisor x sk_gerente x sk_produto x familia. Serve o portal do Oryon Board (area
+    Faturamento & Comercial) sem recalcular o netting linha a linha a cada request; Rede/Regiao/Cidade/Estado
+    resolvem via join com dim_cliente em tempo de consulta (nao entram no grao pra nao inflar a cardinalidade).
+
+    '
+  columns:
+  - name: ano_mes
+    tests:
+    - not_null
+- name: agg_faturamento_cliente_mes
+  description: 'Agregado mensal de Venda Real por cliente — grao ano_mes x filial x sk_cliente x familia.
+    Serve a Analise Detalhada (ranking por cliente), Positivacao e Carteira e Curva ABC e Mix do portal.
+
+    '
+  columns:
+  - name: ano_mes
+    tests:
+    - not_null
+- name: agg_faturamento_produto_mes
+  description: 'Agregado mensal de Venda Real por produto — grao ano_mes x filial x sk_produto. Serve
+    a abertura por produto da Analise Detalhada do portal.
+
+    '
+  columns:
+  - name: ano_mes
+    tests:
+    - not_null
+- name: fato_faturamento
+  description: 'Fato faturamento — Protheus (SD2010). Grao: item de nota fiscal de saida. Chaves substitutas
+    resolvidas contra dim_cliente/dim_produto/ dim_vendedor; sem match cai no membro "NAO_IDENTIFICADO"
+    de cada dimensao (nunca fica orfao silencioso).
+
+    '
+  columns:
+  - name: recno_origem
+    tests:
+    - unique
+    - not_null
+  - name: sk_cliente
+    tests:
+    - not_null
+    - relationships:
+        arguments:
+          to: ref('dim_cliente')
+          field: sk_cliente
+  - name: sk_produto
+    tests:
+    - not_null
+    - relationships:
+        arguments:
+          to: ref('dim_produto')
+          field: sk_produto
+  - name: sk_vendedor
+    tests:
+    - not_null
+    - relationships:
+        arguments:
+          to: ref('dim_vendedor')
+          field: sk_vendedor
+  - name: total
+    tests:
+    - not_null
+- name: fato_bonificacao
+  description: 'Fato bonificacao — Protheus (SD2010, CFOP de bonificacao/amostra gratis). Grao: item de
+    nota fiscal.
+
+    '
+  columns:
+  - name: recno_origem
+    tests:
+    - unique
+    - not_null
+  - name: sk_cliente
+    tests:
+    - not_null
+    - relationships:
+        arguments:
+          to: ref('dim_cliente')
+          field: sk_cliente
+  - name: sk_produto
+    tests:
+    - not_null
+    - relationships:
+        arguments:
+          to: ref('dim_produto')
+          field: sk_produto
+  - name: sk_vendedor
+    tests:
+    - not_null
+    - relationships:
+        arguments:
+          to: ref('dim_vendedor')
+          field: sk_vendedor
+- name: fato_devolucoes
+  description: 'Fato devolucoes — Protheus (SD1010). Grao: item de nota fiscal de entrada por devolucao
+    de venda.
+
+    '
+  columns:
+  - name: recno_origem
+    tests:
+    - unique
+    - not_null
+  - name: sk_cliente
+    tests:
+    - not_null
+    - relationships:
+        arguments:
+          to: ref('dim_cliente')
+          field: sk_cliente
+  - name: sk_produto
+    tests:
+    - not_null
+    - relationships:
+        arguments:
+          to: ref('dim_produto')
+          field: sk_produto
+- name: fato_refaturamento
+  description: 'Fato refaturamento — Protheus (SD2010, agregado). Sem cliente (grao do legado nao rastreia
+    isso).
+
+    '
+  columns:
+  - name: recno_origem
+    tests:
+    - unique
+    - not_null
+  - name: sk_produto
+    tests:
+    - not_null
+    - relationships:
+        arguments:
+          to: ref('dim_produto')
+          field: sk_produto
+- name: fato_remessa_industrializacao
+  description: 'Fato remessa para industrializacao — Protheus (SD2010, CFOP 5901/ 5903/6901/6903).
+
+    '
+  columns:
+  - name: recno_origem
+    tests:
+    - unique
+    - not_null
+  - name: sk_cliente
+    tests:
+    - not_null
+    - relationships:
+        arguments:
+          to: ref('dim_cliente')
+          field: sk_cliente
+  - name: sk_produto
+    tests:
+    - not_null
+    - relationships:
+        arguments:
+          to: ref('dim_produto')
+          field: sk_produto
+  - name: sk_vendedor
+    tests:
+    - not_null
+    - relationships:
+        arguments:
+          to: ref('dim_vendedor')
+          field: sk_vendedor
+- name: fato_coopeval_remessa
+  description: 'Fato remessas Coopeval — Protheus (SD2010, cliente 07390806).
+
+    '
+  columns:
+  - name: recno_origem
+    tests:
+    - unique
+    - not_null
+  - name: sk_cliente
+    tests:
+    - not_null
+    - relationships:
+        arguments:
+          to: ref('dim_cliente')
+          field: sk_cliente
+  - name: sk_produto
+    tests:
+    - not_null
+    - relationships:
+        arguments:
+          to: ref('dim_produto')
+          field: sk_produto
+  - name: sk_vendedor
+    tests:
+    - not_null
+    - relationships:
+        arguments:
+          to: ref('dim_vendedor')
+          field: sk_vendedor
+- name: fato_acordo_comercial
+  description: 'Fato acordo comercial — Protheus (SD1010, TES 050/052). Grao: item de nota fiscal de entrada.
+
+    '
+  columns:
+  - name: recno_origem
+    tests:
+    - unique
+    - not_null
+  - name: sk_cliente
+    tests:
+    - not_null
+    - relationships:
+        arguments:
+          to: ref('dim_cliente')
+          field: sk_cliente
+  - name: sk_produto
+    tests:
+    - not_null
+    - relationships:
+        arguments:
+          to: ref('dim_produto')
+          field: sk_produto
+- name: fato_pedidos
+  description: 'Fato pedidos — Protheus (SC9010, liberacao/embarque). Grao: pedido + cliente + produto
+    + item + sequencia. Sem alvo de reconciliacao no piloto anterior (fonte nova).
+
+    '
+  columns:
+  - name: recno_origem
+    tests:
+    - unique
+    - not_null
+  - name: sk_cliente
+    tests:
+    - not_null
+    - relationships:
+        arguments:
+          to: ref('dim_cliente')
+          field: sk_cliente
+  - name: sk_produto
+    tests:
+    - not_null
+    - relationships:
+        arguments:
+          to: ref('dim_produto')
+          field: sk_produto
+  - name: sk_vendedor
+    tests:
+    - not_null
+    - relationships:
+        arguments:
+          to: ref('dim_vendedor')
+          field: sk_vendedor
+  - name: sk_gerente
+    tests:
+    - not_null
+    - relationships:
+        arguments:
+          to: ref('dim_vendedor')
+          field: sk_vendedor
+- name: fato_comissao
+  description: 'Fato comissao — Protheus (SE5010, baixa de titulo). Grao: evento de baixa, nao item de
+    NF. Carrega vendedor, gerente e "PF" na mesma linha, cada um com seu percentual e valor.
+
+    '
+  columns:
+  - name: sk_comissao
+    tests:
+    - unique
+    - not_null
+  - name: sk_cliente
+    tests:
+    - not_null
+    - relationships:
+        arguments:
+          to: ref('dim_cliente')
+          field: sk_cliente
+  - name: sk_vendedor
+    tests:
+    - not_null
+    - relationships:
+        arguments:
+          to: ref('dim_vendedor')
+          field: sk_vendedor
+  - name: valor
+    tests:
+    - not_null
+- name: fato_faturamento_datavale
+  description: 'Fato faturamento — historico DATAVALE (02/2024 a 01/2025). Grao: linha de venda (sem CFOP/serie/item
+    — o DATAVALE nao guarda isso). Mantido separado de fato_faturamento ate o grao comum ser definido.
+
+    '
+  columns:
+  - name: sk_cliente
+    tests:
+    - not_null
+    - relationships:
+        arguments:
+          to: ref('dim_cliente')
+          field: sk_cliente
+  - name: sk_produto
+    tests:
+    - not_null
+    - relationships:
+        arguments:
+          to: ref('dim_produto')
+          field: sk_produto
+  - name: sk_vendedor
+    tests:
+    - not_null
+    - relationships:
+        arguments:
+          to: ref('dim_vendedor')
+          field: sk_vendedor

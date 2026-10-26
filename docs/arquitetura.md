@@ -430,9 +430,11 @@ produção hoje, não hipótese.
 
 Sete questões foram fechadas em 21/08/2026 (ver cap. 9.4). Restam:
 
-1. **`VENDA REAL` deveria subtrair devolução?** Dentro do modelo eleito como referência,
-   `Venda Real Liquida` subtrai e `VENDA REAL` não. Uma das duas está errada, e a
-   definitiva precisa ser escolhida antes de virar `fato_faturamento`.
+1. ~~`VENDA REAL` deveria subtrair devolução?~~ ✅ **Fechada em 01/09/2026**
+   (`docs/backlog_paridade.md` §6): não é bug, são dois métodos de netting
+   legítimos — `VENDA REAL` (por NF de origem) virou a definição única de
+   faturamento líquido em `fato_faturamento`. Ver também a memória de sessão
+   `fase12-decisoes-fonte-faturamento`.
 2. **Quem documenta as doze colunas do DATAVALE?** Sem isso o histórico pré-Protheus
    não entra no DW. É trabalho de arqueologia, não de engenharia — depende de alguém que
    se lembre.

@@ -1,0 +1,19 @@
+version: 2
+models:
+- name: stg_entradas_custo
+  description: 'Itens de NF de entrada pra custeio (SF1010+SD1010, tipo N/C). Grao recno_origem.
+
+    '
+  columns:
+  - name: recno_origem
+    tests:
+    - unique
+    - not_null
+- name: stg_frete_entrada
+  description: 'Frete rateado em NF de entrada (GWM010, tipo doc ''1''), agregado. Grao filial+nf+item+serie+fornecedor.
+
+    '
+  columns:
+  - name: filial
+    tests:
+    - not_null

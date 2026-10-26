@@ -2,16 +2,26 @@
 python-dotenv>=1.0
 SQLAlchemy>=2.0
 psycopg2-binary>=2.9      # driver Postgres
-pyodbc>=5.1               # driver SQL Server (Protheus) - exige ODBC Driver 18
+# Driver SQL Server (Protheus) puro Python — nao exige ODBC Driver no SO.
+# Fixado em 1.17.x: extracao/conexao.py altera Collation.get_codec (API interna do
+# pytds) para decodificar varchar de forma tolerante. Revalidar ao subir a versao.
+python-tds>=1.17,<1.18
+sqlalchemy-pytds>=1.0     # dialeto mssql+pytds para o SQLAlchemy
 pandas>=2.2
 PyYAML>=6.0
 
 # ===== Transformacao (bronze -> prata -> ouro) =====
-dbt-core>=1.8
-dbt-postgres>=1.8
-# mashumaro<3.15 (pin do dbt-core 1.11) tem um bug que quebra o import do dbt
-# (UnserializableField em JSONObjectSchema). Forcar versao mais nova corrige.
-mashumaro>=3.22
+# Versoes fixadas. A sintaxe nova de testes (arguments:) exige dbt-core >= 1.10.
+# O dbt-core 1.12.x declara mashumaro<3.18, entao o teto e 3.17. O piso 3.15
+# existe porque mashumaro < 3.15 quebra o import do dbt (UnserializableField).
+# Nao subir o piso para >=3.18: o pip nao resolve (conflito com o dbt-core).
+dbt-core>=1.12,<1.13
+dbt-postgres>=1.11,<1.12
+mashumaro>=3.15,<3.18
 
 # ===== Apoio =====
 openpyxl>=3.1             # leitura pontual de planilhas durante a migracao
+
+# ===== API de trigger (painel de execucao sob demanda, consumido pelo Oryon) =====
+fastapi>=0.115
+uvicorn[standard]>=0.32

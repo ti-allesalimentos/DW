@@ -1,0 +1,238 @@
+version: 2
+models:
+- name: dim_calendario
+  description: 'Dimensao calendario gerada por codigo, substitui o dCalendario.xlsx. Cobre 2015-01-01
+    a 2035-12-31. Logica fiel ao Power Query legado (docs/legado_m/dCalendario.m), incluindo a regra de
+    ano fiscal herdada — ver comentario no topo do modelo.
+
+    '
+  columns:
+  - name: data
+    tests:
+    - unique
+    - not_null
+  - name: ano
+    tests:
+    - not_null
+  - name: mes
+    tests:
+    - not_null
+    - accepted_values:
+        arguments:
+          values:
+          - 1
+          - 2
+          - 3
+          - 4
+          - 5
+          - 6
+          - 7
+          - 8
+          - 9
+          - 10
+          - 11
+          - 12
+  - name: dia_util
+    tests:
+    - not_null
+    - accepted_values:
+        arguments:
+          values:
+          - 0
+          - 1
+  - name: ano_fiscal
+    tests:
+    - not_null
+- name: dim_produto
+  description: 'Produto conformado (grao do cod_produto ja pos de-para -CX), com familia/marca/sub-recorte
+    do seed familia. Inclui membro "NAO_IDENTIFICADO" para produto sem cadastro ativo no SB1010.
+
+    '
+  columns:
+  - name: sk_produto
+    tests:
+    - unique
+    - not_null
+  - name: cod_produto
+    tests:
+    - unique
+    - not_null
+- name: dim_cliente
+  description: 'Cliente conformado (grao cod_cliente || loja), com regiao do seed regiao via UF e rede
+    (dim_rede) via A1_GRPVEN. Inclui membro "NAO_IDENTIFICADO" para os ~0,7% do historico DATAVALE sem
+    match de CNPJ contra o SA1010 e para cliente sem rede cadastrada.
+
+    '
+  columns:
+  - name: sk_cliente
+    tests:
+    - unique
+    - not_null
+  - name: chave_cliente
+    tests:
+    - unique
+    - not_null
+  - name: sk_rede
+    tests:
+    - not_null
+    - relationships:
+        arguments:
+          to: ref('dim_rede')
+          field: sk_rede
+- name: dim_rede
+  description: 'Rede (grupo de cliente) conformada — Protheus ACY010, grao cod_rede (ACY_GRPVEN). Resolvida
+    no cadastro do cliente via A1_GRPVEN (ver dim_cliente). Inclui membro "NAO_IDENTIFICADO" para cliente
+    sem rede.
+
+    '
+  columns:
+  - name: sk_rede
+    tests:
+    - unique
+    - not_null
+  - name: cod_rede
+    tests:
+    - unique
+    - not_null
+- name: dim_vendedor
+  description: 'Vendedor conformado (grao cod_vendedor, normalizado numericamente porque o SA3010 tem
+    o mesmo codigo com padding inconsistente). Inclui membro "NAO_IDENTIFICADO".
+
+    '
+  columns:
+  - name: sk_vendedor
+    tests:
+    - unique
+    - not_null
+  - name: cod_vendedor
+    tests:
+    - unique
+    - not_null
+- name: dim_fornecedor
+  description: 'Fornecedor conformado (grao chave_fornecedor), espelha dim_cliente. Inclui membro "NAO_IDENTIFICADO".
+
+    '
+  columns:
+  - name: sk_fornecedor
+    tests:
+    - unique
+    - not_null
+  - name: chave_fornecedor
+    tests:
+    - unique
+    - not_null
+- name: dim_natureza_financeira
+  description: 'Natureza financeira conformada (grao cod_natureza, SED010). Inclui membro "NAO_IDENTIFICADO".
+
+    '
+  columns:
+  - name: sk_natureza
+    tests:
+    - unique
+    - not_null
+  - name: cod_natureza
+    tests:
+    - unique
+    - not_null
+- name: dim_banco
+  description: Banco/conta corrente cadastrada (SA6010).
+  columns:
+  - name: sk_banco
+    tests:
+    - unique
+    - not_null
+  - name: cod_banco
+    tests:
+    - unique
+    - not_null
+- name: dim_motivo_baixa
+  description: Motivo de baixa de titulo (F7G010).
+  columns:
+  - name: sk_motivo_baixa
+    tests:
+    - unique
+    - not_null
+  - name: sigla
+    tests:
+    - unique
+    - not_null
+- name: dim_forma_pagamento
+  description: Forma de pagamento (SX5010, tabela '58').
+  columns:
+  - name: sk_forma_pagamento
+    tests:
+    - unique
+    - not_null
+  - name: cod_forma_pagamento
+    tests:
+    - unique
+    - not_null
+- name: dim_conta_contabil
+  description: 'Plano de contas analitico (CT1010, so codigos com 8 digitos). Reconstroi a intencao de
+    uma query legada que era codigo morto (ver nota no modelo).
+
+    '
+  columns:
+  - name: sk_conta_contabil
+    tests:
+    - unique
+    - not_null
+  - name: codigo_conta
+    tests:
+    - unique
+    - not_null
+- name: dim_centro_custo
+  description: Centro de custo conformado (CTT010).
+  columns:
+  - name: sk_centro_custo
+    tests:
+    - unique
+    - not_null
+  - name: cod_centro_custo
+    tests:
+    - unique
+    - not_null
+- name: dim_cond_pgto
+  description: Condicao de pagamento (SE4010).
+  columns:
+  - name: sk_cond_pgto
+    tests:
+    - unique
+    - not_null
+  - name: cod_cond_pgto
+    tests:
+    - unique
+    - not_null
+- name: dim_transportador
+  description: Transportador conformado (GU3010).
+  columns:
+  - name: sk_transportador
+    tests:
+    - unique
+    - not_null
+  - name: cod_transportador
+    tests:
+    - unique
+    - not_null
+- name: dim_funcionario
+  description: Funcionario conformado (SRA010).
+  columns:
+  - name: sk_funcionario
+    tests:
+    - unique
+    - not_null
+  - name: chave_funcionario
+    tests:
+    - unique
+    - not_null
+- name: dim_verba
+  description: Verba de folha conformada (SRV010).
+  columns:
+  - name: sk_verba
+    tests:
+    - unique
+    - not_null
+  - name: cod_verba
+    tests:
+    - unique
+    - not_null

@@ -1,0 +1,71 @@
+version: 2
+models:
+- name: fato_motivo_rescisao
+  description: 'Fato motivo de rescisao com valor pago — Protheus (SRG010+SRR010).
+
+    '
+  columns:
+  - name: sk_rescisao
+    tests:
+    - unique
+    - not_null
+- name: fato_dupla_funcao
+  description: 'Fato dupla funcao ativa — Protheus (RG1010).
+
+    '
+  columns:
+  - name: recno_origem
+    tests:
+    - unique
+    - not_null
+- name: fato_historico_salarial
+  description: 'Fato historico de alteracao de salario base — Protheus (SR3010).
+
+    '
+  columns:
+  - name: recno_origem
+    tests:
+    - unique
+    - not_null
+- name: fato_ausencia
+  description: 'Fato ausencia/afastamento — Protheus (SR8010). Alimenta a regra de "afastado" do headcount
+    do Oryon Board (ponto-no-tempo, aplicada pelo consumidor).
+
+    '
+  columns:
+  - name: recno_origem
+    tests:
+    - unique
+    - not_null
+- name: fato_banco_horas
+  description: 'Fato banco de horas — Protheus (SPI010), snapshot por funcionario (nao historico de lancamentos).
+    Inner join em dim_funcionario de proposito — replica o Oryon Board.
+
+    '
+  columns:
+  - name: sk_funcionario
+    tests:
+    - unique
+    - not_null
+- name: fato_hora_extra
+  description: 'Fato hora extra apontada — Protheus (SPC010/SPH010). So horas; o valor em R$ e calculado
+    no Oryon Board (depende de salario minimo, cadastro manual fora do Protheus).
+
+    '
+  columns:
+  - name: sk_funcionario
+    tests:
+    - not_null
+  - name: ano_mes
+    tests:
+    - not_null
+- name: fato_rescisao_rh
+  description: 'Fato rescisao classificado Voluntario/Involuntario — Protheus (SRG010 + seed motivos_rescisao_rh).
+    Fonte do Turnover do Oryon Board; nao confundir com fato_motivo_rescisao (outro consumidor).
+
+    '
+  columns:
+  - name: recno_origem
+    tests:
+    - unique
+    - not_null

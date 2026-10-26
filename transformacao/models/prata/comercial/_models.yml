@@ -1,0 +1,211 @@
+version: 2
+models:
+- name: stg_faturamento
+  description: 'Itens de nota fiscal de saida conformados, com as regras de negocio explicitas aplicadas
+    (CFOP, filial, exclusoes) e a conversao caixa->quilo resolvida uma unica vez.
+
+    '
+  columns:
+  - name: recno_origem
+    description: R_E_C_N_O_ da SD2010. Rastreia a linha ate a origem.
+    tests:
+    - unique
+    - not_null
+  - name: filial
+    tests:
+    - not_null
+  - name: nfe
+    tests:
+    - not_null
+  - name: dt_emissao
+    description: Data de emissao. Nunca anterior a entrada do Protheus.
+    tests:
+    - not_null
+  - name: cod_produto
+    description: Codigo base, ja sem o sufixo -CX.
+    tests:
+    - not_null
+  - name: chave_cliente
+    tests:
+    - not_null
+  - name: total
+    tests:
+    - not_null
+  - name: um
+    tests:
+    - accepted_values:
+        arguments:
+          values:
+          - KG
+          - UN
+          - CX
+          - PC
+          - FD
+          - LT
+        config:
+          severity: warn
+  tests:
+  - dbt_utils.expression_is_true:
+      arguments:
+        expression: dt_emissao >= '2025-02-01'
+      config:
+        severity: warn
+        error_if: '>1000'
+- name: stg_bonificacao
+  description: 'Itens de nota fiscal de saida classificados como bonificacao/amostra gratis (CFOP 5910/5911/6910/6911),
+    conformados. Mesma origem e mesmos joins do stg_faturamento.
+
+    '
+  columns:
+  - name: filial
+    tests:
+    - not_null
+  - name: nfe
+    tests:
+    - not_null
+  - name: cod_produto
+    tests:
+    - not_null
+  - name: dt_emissao
+    tests:
+    - not_null
+- name: stg_devolucoes
+  description: 'Itens de nota fiscal de entrada por devolucao de venda (SD1010), conformados. Motivo e
+    destino resolvidos contra os seeds motivo_dev e destino (sigla sem match fica visivel como NULL).
+
+    '
+  columns:
+  - name: filial
+    tests:
+    - not_null
+  - name: nf
+    tests:
+    - not_null
+  - name: cod_produto
+    tests:
+    - not_null
+  - name: dt_emissao
+    tests:
+    - not_null
+- name: stg_refaturamento
+  description: 'Refaturamento (reemissao de NF), agregado por filial/produto/NF/ serie/data. So notas
+    com pedido marcado como refaturamento (SC5010.C5_X_REFAT preenchido).
+
+    '
+  columns:
+  - name: filial
+    tests:
+    - not_null
+  - name: cod_produto
+    tests:
+    - not_null
+  - name: nfe
+    tests:
+    - not_null
+- name: stg_remessa_industrializacao
+  description: 'Remessa para industrializacao (CFOP 5901/5903/6901/6903), conformada. Vendedor vem do
+    cabecalho da nota (SF2.F2_VEND1), nao do cadastro do cliente. Ver nota no topo do modelo sobre a duplicacao
+    com "remessa triangular" no legado.
+
+    '
+  columns:
+  - name: filial
+    tests:
+    - not_null
+  - name: nfe
+    tests:
+    - not_null
+  - name: cod_produto
+    tests:
+    - not_null
+- name: stg_coopeval_remessa
+  description: 'Remessas do cliente Coopeval (07390806). Sem filtro de CFOP no legado, so o cliente.
+
+    '
+  columns:
+  - name: filial
+    tests:
+    - not_null
+  - name: nfe
+    tests:
+    - not_null
+  - name: cod_produto
+    tests:
+    - not_null
+- name: stg_acordo_comercial
+  description: 'Acordo comercial (entrada de verba/bonificacao do fornecedor via TES 050/052), conformado.
+    Sem join com outras tabelas -- a query legada usa so o SD1010.
+
+    '
+  columns:
+  - name: filial
+    tests:
+    - not_null
+  - name: cod_produto
+    tests:
+    - not_null
+  - name: dt_emissao
+    tests:
+    - not_null
+- name: stg_pedidos
+  description: 'Pedidos de venda liberados/embarcados (SC9010), agregado por pedido/cliente/produto/item/sequencia.
+    Sem equivalente reconciliavel no piloto anterior (fonte nova, nao migrada antes).
+
+    '
+  columns:
+  - name: filial
+    tests:
+    - not_null
+  - name: pedido
+    tests:
+    - not_null
+  - name: cod_produto
+    tests:
+    - not_null
+  - name: chave_cliente
+    tests:
+    - not_null
+- name: stg_faturamento_datavale
+  description: 'Historico de faturamento do DATAVALE (ERP anterior ao Protheus, 02/2024 a 01/2025), com
+    cliente e vendedor resolvidos contra o cadastro atual. Ainda nao unificado com stg_faturamento — grao
+    e colunas diferem (sem CFOP, sem serie/item de NF, sem impostos).
+
+    '
+  columns:
+  - name: filial
+    tests:
+    - not_null
+  - name: cod_produto
+    tests:
+    - not_null
+  - name: dt_emissao
+    tests:
+    - not_null
+  - name: chave_cliente
+    tests:
+    - not_null
+  tests:
+  - dbt_utils.expression_is_true:
+      arguments:
+        expression: chave_cliente <> 'NAO_IDENTIFICADO'
+      config:
+        severity: warn
+        error_if: '>1000'
+- name: stg_comissao
+  description: 'Comissao sobre baixa de titulo (SE5010), agregada por evento de baixa. Fase 4 — carryover
+    da Fase 2, que adiou comissao por depender de tabelas do Financeiro (SE1010/SE5010).
+
+    '
+  columns:
+  - name: filial
+    tests:
+    - not_null
+  - name: titulo
+    tests:
+    - not_null
+  - name: chave_cliente
+    tests:
+    - not_null
+  - name: valor
+    tests:
+    - not_null

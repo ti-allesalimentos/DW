@@ -11,9 +11,11 @@ User=alles-dw
 Group=alles-dw
 WorkingDirectory=/opt/alles-dataplatform
 ExecStart=/opt/alles-dataplatform/infra/scripts/rodar_pipeline.sh
-# 45 min: generoso pro dbt build e pra extracao de fontes maiores nao
-# serem mortas no meio (o MERGE e transacional, mas nao ha por que abortar).
-TimeoutStartSec=2700
+# 2h = o intervalo do timer. Com 1 vCPU o ciclo (extracao + dbt build, que sozinho
+# leva ~28 min) passou dos 45 min iniciais e era morto no meio. Um ciclo que
+# estoura 2h indica que o agendamento esta errado para o hardware; o alerta
+# OnFailure avisa. O MERGE e transacional, entao abortar nao corrompe o bronze.
+TimeoutStartSec=7200
 
 [Install]
 WantedBy=multi-user.target
