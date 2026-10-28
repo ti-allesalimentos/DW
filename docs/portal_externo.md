@@ -130,13 +130,12 @@ Protheus) e malhas IBGE simplificadas, servidas como arquivos estáticos pelo po
 
 | Fase | Entrega | Saída |
 |---|---|---|
-| **0. Fundação** | decisões ⏳, repo, domínio, VM, Entra, tokens de design, especificação do piloto | pronto para construir |
-| **1. Piloto representantes** | login + escopo + 4 telas (vendas por município em **mapa**, carteira e positivação, meta x realizado, comissão própria) + teste de isolamento | 3 a 5 representantes usando de verdade |
-| **2. Endurecimento** | pentest, LGPD, suporte, observabilidade; abertura a todos os representantes | produção para representantes |
-| **3. Clientes** | extrato, pedidos, títulos, devoluções | clientes piloto |
-| **4. Fornecedores** | pedidos, recebimentos, pagamentos | fornecedores piloto |
+| **0. Fundação** | repo, VM própria, Entra, domínio, tokens de design, esqueleto web + API | pronto para construir |
+| **1. Portal interno** | as **50 telas da v1** (ver `docs/portal_produto.md`), login Entra, escopo por perfil, exportação | gestores e diretoria usando |
+| **2. Endurecimento** | auditoria, LGPD, observabilidade, pentest | pronto para abrir a externos |
+| **3. Representantes** | carteira, vendas, positivação, meta, comissão própria, em **mapa** | representantes piloto |
+| **4. Clientes e fornecedores** | extrato, pedidos, títulos; pedidos de compra e pagamentos | externos piloto |
 
-As telas internas do Oryon Board podem migrar para o portal depois, sem pressa.
 Prazos serão estimados após a Fase 0 (dependem de VM, Entra e jurídico).
 
 ## 10. Decisões abertas
