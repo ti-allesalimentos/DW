@@ -2,7 +2,7 @@
   config(
     materialized='incremental',
     incremental_strategy='append',
-    pre_hook="{% if is_incremental() %}delete from {{ this }} where _carregado_em >= current_timestamp - interval '7 days'{% endif %}",
+    pre_hook="{% if is_incremental() %}delete from {{ this }} t where t.recno_origem in (select recno_origem from {{ ref('stg_contas_areceber') }} where _carregado_em >= current_timestamp - interval '7 days') or not exists (select 1 from {{ ref('stg_contas_areceber') }} s where s.recno_origem = t.recno_origem){% endif %}",
     indexes=[
       {'columns': ['data_emissao']},
       {'columns': ['data_vencimento']},
