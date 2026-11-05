@@ -9,7 +9,8 @@
 
 /*
   Agregado mensal de faturamento por cliente — grao: ano_mes x filial x
-  sk_cliente x familia.
+  sk_cliente x familia x canal (canal = dim_produto.canal; entra no grao porque
+  o canal sai da MARCA, nao da familia, e este agregado nao tem produto).
 
   Irmao de agg_faturamento_mes, com a MESMA regra de Venda Real:
   Liquido = Bruto - Devolucao - Desconto Comercial - Acordo Comercial
@@ -32,6 +33,7 @@ with eventos as (
         f.filial,
         f.sk_cliente,
         coalesce(p.familia, 'SEM FAMILIA')              as familia,
+        coalesce(p.canal, 'NÃO FOOD')                   as canal,
         f.nfe,
         f.total                                         as valor_bruto,
         case when f.um = 'KG' then f.qtd else 0 end     as kg_bruto,
@@ -50,6 +52,7 @@ with eventos as (
         d.filial,
         coalesce(vo.sk_cliente, d.sk_cliente),
         coalesce(p.familia, 'SEM FAMILIA'),
+        coalesce(p.canal, 'NÃO FOOD'),
         null,
         0, 0, 0,
         d.total,
@@ -68,6 +71,7 @@ with eventos as (
         a.filial,
         coalesce(vo.sk_cliente, a.sk_cliente),
         coalesce(p.familia, 'SEM FAMILIA'),
+        coalesce(p.canal, 'NÃO FOOD'),
         null,
         0, 0, 0, 0, 0,
         a.total
@@ -83,6 +87,7 @@ select
     filial,
     sk_cliente,
     familia,
+    canal,
     count(distinct nfe)                                         as qtd_notas,
     round(sum(valor_bruto)::numeric, 2)                         as valor_bruto,
     round(sum(valor_devolucao)::numeric, 2)                     as valor_devolucao,
@@ -94,4 +99,4 @@ select
     round(sum(kg_devolvido)::numeric, 2)                        as kg_devolvido,
     round((sum(kg_bruto) - sum(kg_devolvido))::numeric, 2)      as kg_liquido
 from eventos
-group by 1, 2, 3, 4
+group by 1, 2, 3, 4, 5
