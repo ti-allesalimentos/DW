@@ -94,5 +94,9 @@ select
     familia,
     marca,
     sub_recorte,
-    descricao_lousinha
+    descricao_lousinha,
+    -- Canal de venda: FOOD = marca FORTENA; NAO FOOD = todo o resto (inclusive
+    -- produto sem linha na lista de familias). Regra unica aqui, na dimensao;
+    -- o Oryon so le a coluna. Se entrar outra marca FOOD, e so listar aqui.
+    case when upper(trim(marca)) in ('FORTENA') then 'FOOD' else 'NÃO FOOD' end as canal
 from com_familia

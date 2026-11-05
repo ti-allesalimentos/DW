@@ -57,6 +57,13 @@ models:
     tests:
     - unique
     - not_null
+  - name: canal
+    description: 'Canal de venda do produto: FOOD (marca FORTENA) ou NÃO FOOD (os demais, inclusive sem marca).'
+    tests:
+    - not_null
+    - accepted_values:
+        arguments:
+          values: ['FOOD', 'NÃO FOOD']
 - name: dim_cliente
   description: 'Cliente conformado (grao cod_cliente || loja), com regiao do seed regiao via UF e rede
     (dim_rede) via A1_GRPVEN. Inclui membro "NAO_IDENTIFICADO" para os ~0,7% do historico DATAVALE sem
