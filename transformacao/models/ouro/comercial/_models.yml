@@ -11,6 +11,16 @@ models:
   - name: ano_mes
     tests:
     - not_null
+- name: agg_faturamento_dia
+  description: 'Agregado DIARIO de Venda Real — mesmo grao e mesma regra de agg_faturamento_mes, com data_emissao
+    no lugar de ano_mes. Serve comparacoes de periodo parcial (YoY do mes em andamento). Somado por mes,
+    reproduz agg_faturamento_mes (teste agg_faturamento_dia_reconcilia_mes).
+
+    '
+  columns:
+  - name: data_emissao
+    tests:
+    - not_null
 - name: agg_faturamento_cliente_mes
   description: 'Agregado mensal de Venda Real por cliente — grao ano_mes x filial x sk_cliente x familia.
     Serve a Analise Detalhada (ranking por cliente), Positivacao e Carteira e Curva ABC e Mix do portal.

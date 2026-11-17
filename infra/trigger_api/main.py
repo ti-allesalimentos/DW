@@ -28,6 +28,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
+try:                                  # flock so existe em Linux (producao); no Windows a trava de arquivo e ignorada
+    import fcntl
+except ImportError:                   # pragma: no cover
+    fcntl = None
+
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, Header, HTTPException
 from pydantic import BaseModel
@@ -73,6 +78,34 @@ app = FastAPI(title="Alles DW — Trigger API", version="1.0")
 # complexidade se justificar). Rodar com mais de um worker quebra essa
 # garantia; documentado no service file.
 _execucao_lock = threading.Lock()
+
+# Trava de ARQUIVO compartilhada com infra/scripts/rodar_pipeline.sh (flock): garante que o ciclo
+# automatico e uma execucao manual nunca rodem juntos — valendo tambem entre processos/workers.
+# O kernel solta a trava se o processo morrer, entao nao ha trava "presa".
+LOCK_ARQUIVO = LOG_DIR / ".execucao.lock"
+
+
+class TravaArquivo:
+    def __init__(self) -> None:
+        self._f = None
+
+    def tentar(self) -> bool:
+        """Pega a trava sem esperar. False = o ciclo automatico (ou outra execucao) esta rodando."""
+        if fcntl is None:
+            return True
+        f = open(LOCK_ARQUIVO, "a")
+        try:
+            fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError:
+            f.close()
+            return False
+        self._f = f
+        return True
+
+    def liberar(self) -> None:
+        if self._f is not None:
+            self._f.close()      # fechar o arquivo solta o flock
+            self._f = None
 
 
 def exigir_api_key(x_api_key: Optional[str] = Header(default=None)) -> None:
@@ -192,6 +225,11 @@ def rodar_carga(body: RodarCargaRequest):
     if not _execucao_lock.acquire(blocking=False):
         raise HTTPException(409, "ja existe uma execucao manual em andamento")
 
+    trava = TravaArquivo()
+    if not trava.tentar():
+        _execucao_lock.release()
+        raise HTTPException(409, "o ciclo automatico do DW esta em andamento — tente de novo quando ele terminar")
+
     # Rotulo gravado na coluna `fonte` do controle (reaproveitada): o nome da
     # fonte, "dominio:<x>" para refresh por dashboard, ou "(todas)".
     rotulo = f"dominio:{body.dominio}" if body.dominio else body.fonte
@@ -209,12 +247,13 @@ def rodar_carga(body: RodarCargaRequest):
                 {"fonte": rotulo, "solicitado_por": body.solicitado_por},
             ).scalar_one()
     except Exception:
+        trava.liberar()
         _execucao_lock.release()
         raise
 
     thread = threading.Thread(
         target=_executar_em_background,
-        args=(execucao_id, body.fonte, body.dominio),
+        args=(execucao_id, body.fonte, body.dominio, trava),
         daemon=True,
     )
     thread.start()
@@ -232,7 +271,7 @@ def _atualizar_execucao(execucao_id: int, **campos) -> None:
 
 
 def _executar_em_background(execucao_id: int, fonte: Optional[str],
-                            dominio: Optional[str] = None) -> None:
+                            dominio: Optional[str] = None, trava: Optional[TravaArquivo] = None) -> None:
     log_path = LOG_DIR / f"execucao_manual_{execucao_id}.log"
     try:
         with open(log_path, "w", encoding="utf-8") as log:
@@ -304,4 +343,6 @@ def _executar_em_background(execucao_id: int, fonte: Optional[str],
             concluido_em=datetime.now(timezone.utc),
         )
     finally:
+        if trava is not None:
+            trava.liberar()
         _execucao_lock.release()

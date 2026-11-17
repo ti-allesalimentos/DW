@@ -9,11 +9,13 @@
 
 /*
   Agregado mensal de faturamento por cliente — grao: ano_mes x filial x
-  sk_cliente x familia.
+  sk_cliente x familia x canal (canal = dim_produto.canal; entra no grao porque
+  o canal sai da MARCA, nao da familia, e este agregado nao tem produto).
 
   Irmao de agg_faturamento_mes, com a MESMA regra de Venda Real:
-  Liquido = Bruto - Devolucao - Desconto Comercial - Acordo Comercial
-  (decisao de 29/09/2026). Devolucao e Acordo caem no mes da PROPRIA NF e
+  Liquido = Bruto - Devolucao - Desconto Comercial (o Acordo Comercial saiu
+  do liquido em 11/11/2026; valor_acordo_comercial fica so como coluna
+  informativa). Devolucao e Acordo caem no mes da PROPRIA NF e
   herdam cliente (quando a origem e achada) via nf_origem/item_origem; a
   familia vem do produto da propria linha de devolucao/acordo.
 
@@ -32,6 +34,7 @@ with eventos as (
         f.filial,
         f.sk_cliente,
         coalesce(p.familia, 'SEM FAMILIA')              as familia,
+        coalesce(p.canal, 'NÃO FOOD')                   as canal,
         f.nfe,
         f.total                                         as valor_bruto,
         case when f.um = 'KG' then f.qtd else 0 end     as kg_bruto,
@@ -50,6 +53,7 @@ with eventos as (
         d.filial,
         coalesce(vo.sk_cliente, d.sk_cliente),
         coalesce(p.familia, 'SEM FAMILIA'),
+        coalesce(p.canal, 'NÃO FOOD'),
         null,
         0, 0, 0,
         d.total,
@@ -68,6 +72,7 @@ with eventos as (
         a.filial,
         coalesce(vo.sk_cliente, a.sk_cliente),
         coalesce(p.familia, 'SEM FAMILIA'),
+        coalesce(p.canal, 'NÃO FOOD'),
         null,
         0, 0, 0, 0, 0,
         a.total
@@ -83,15 +88,16 @@ select
     filial,
     sk_cliente,
     familia,
+    canal,
     count(distinct nfe)                                         as qtd_notas,
     round(sum(valor_bruto)::numeric, 2)                         as valor_bruto,
     round(sum(valor_devolucao)::numeric, 2)                     as valor_devolucao,
     round(sum(valor_desconto)::numeric, 2)                      as valor_desconto_comercial,
     round(sum(valor_acordo)::numeric, 2)                        as valor_acordo_comercial,
-    round((sum(valor_bruto) - sum(valor_devolucao) - sum(valor_desconto) - sum(valor_acordo))::numeric, 2)
+    round((sum(valor_bruto) - sum(valor_devolucao) - sum(valor_desconto))::numeric, 2)
                                                                 as valor_liquido,
     round(sum(kg_bruto)::numeric, 2)                            as kg_bruto,
     round(sum(kg_devolvido)::numeric, 2)                        as kg_devolvido,
     round((sum(kg_bruto) - sum(kg_devolvido))::numeric, 2)      as kg_liquido
 from eventos
-group by 1, 2, 3, 4
+group by 1, 2, 3, 4, 5
