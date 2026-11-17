@@ -19,10 +19,11 @@
   recalcular nada linha a linha a cada request.
 
   Faturamento Liquido ("Venda Real") = Bruto - Devolucao - Desconto
-  Comercial - Acordo Comercial (decisao de 29/09/2026 com o Lucas —
-  substitui a regra anterior de Bruto-Devolucao; ver
-  docs/reconciliacao_gp.md e memoria fase12-decisoes-fonte-faturamento,
-  que precisam ser atualizadas).
+  Comercial. Historico: ate 29/09/2026 era Bruto - Devolucao; de 29/09 a
+  10/11/2026 tambem descontava o Acordo Comercial; em 11/11/2026 o Lucas
+  tirou o Acordo do liquido (vai ser tratado a parte). A coluna
+  valor_acordo_comercial segue aqui, apenas informativa, e NAO entra em
+  valor_liquido.
 
   Devolucao e Acordo Comercial sao bucketizados pela DATA DA PROPRIA NF
   (de devolucao / de entrada do acordo), NAO a data da venda original —
@@ -139,7 +140,7 @@ select
     coalesce(d.kg_devolvido, 0)                                   as kg_devolvido,
     coalesce(a.valor_acordo_comercial, 0)                         as valor_acordo_comercial,
     coalesce(v.valor_bruto, 0) - coalesce(d.valor_devolucao, 0)
-        - coalesce(v.valor_desconto_comercial, 0) - coalesce(a.valor_acordo_comercial, 0)
+        - coalesce(v.valor_desconto_comercial, 0)
                                                                    as valor_liquido,
     coalesce(v.kg_bruto, 0) - coalesce(d.kg_devolvido, 0)         as kg_liquido
 from agg_vendas v

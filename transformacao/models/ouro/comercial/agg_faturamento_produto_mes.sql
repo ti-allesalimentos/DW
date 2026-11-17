@@ -12,9 +12,10 @@
   sk_produto.
 
   Irmao de agg_faturamento_mes/agg_faturamento_cliente_mes, com a MESMA
-  regra de Venda Real: Liquido = Bruto - Devolucao - Desconto Comercial -
-  Acordo Comercial (decisao de 29/09/2026). Devolucao e Acordo caem no mes
-  da PROPRIA NF, no produto da propria linha. Serve a abertura por produto
+  regra de Venda Real: Liquido = Bruto - Devolucao - Desconto Comercial
+  (o Acordo Comercial saiu do liquido em 11/11/2026; valor_acordo_comercial
+  fica so como coluna informativa). Devolucao e Acordo caem no mes da
+  PROPRIA NF, no produto da propria linha. Serve a abertura por produto
   da Analise Detalhada do portal.
 */
 
@@ -68,7 +69,7 @@ select
     round(sum(valor_devolucao)::numeric, 2)                     as valor_devolucao,
     round(sum(valor_desconto)::numeric, 2)                      as valor_desconto_comercial,
     round(sum(valor_acordo)::numeric, 2)                        as valor_acordo_comercial,
-    round((sum(valor_bruto) - sum(valor_devolucao) - sum(valor_desconto) - sum(valor_acordo))::numeric, 2)
+    round((sum(valor_bruto) - sum(valor_devolucao) - sum(valor_desconto))::numeric, 2)
                                                                 as valor_liquido,
     round(sum(kg_bruto)::numeric, 2)                            as kg_bruto,
     round(sum(kg_devolvido)::numeric, 2)                        as kg_devolvido,
